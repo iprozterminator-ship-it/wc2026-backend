@@ -165,13 +165,13 @@ async def get_bets(status: Optional[str] = None):
 
 @app.post("/api/bets", status_code=201)
 async def create_bet(bet: BetCreate):
-    row = await db.create_bet(bet.model_dump())
+    row = await db.create_bet(bet.dict())
     await broadcast({"type": "bet_created", "bet": row})
     return row
 
 @app.put("/api/bets/{bet_id}")
 async def update_bet(bet_id: str, data: BetUpdate):
-    row = await db.update_bet(bet_id, data.model_dump(exclude_none=True))
+    row = await db.update_bet(bet_id, data.dict(exclude_none=True))
     if not row:
         raise HTTPException(404, "Bet not found")
     await broadcast({"type": "bet_updated", "bet": row})
