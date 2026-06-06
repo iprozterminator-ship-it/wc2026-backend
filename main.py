@@ -101,9 +101,17 @@ async def health():
 
 @app.get("/api/portfolio")
 async def get_portfolio():
-    bets = await db.get_bets()
-    cfg  = await db.get_config()
-    starting = cfg.get("starting_bankroll", 500.0)
+    try:
+        bets = await db.get_bets()
+    except Exception as e:
+        print(f"⚠️ get_bets error: {e}")
+        bets = []
+    try:
+        cfg  = await db.get_config()
+    except Exception as e:
+        print(f"⚠️ get_config error: {e}")
+        cfg = {}
+    starting = float(cfg.get("starting_bankroll", 500.0))
 
     settled = [b for b in bets if b["status"] in ("won", "lost")]
     open_bets = [b for b in bets if b["status"] == "pending"]
