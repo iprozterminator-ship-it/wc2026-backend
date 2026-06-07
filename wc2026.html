@@ -733,6 +733,41 @@ body.share-mode .share-hide{display:none!important}
   </div>
 </div>
 
+<!-- ══ BET RECEIPT MODAL ══ -->
+<div class="ov" id="receipt-ov">
+  <div class="md" style="width:380px;text-align:center">
+    <div style="padding:28px 24px 20px">
+      <div id="receipt-icon" style="font-size:48px;margin-bottom:12px">✅</div>
+      <div style="font-size:18px;font-weight:800;color:var(--t1);margin-bottom:4px" id="receipt-title">Bet Logged</div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:20px" id="receipt-subtitle">Placed manually with your bookmaker</div>
+      <div style="background:var(--bg2);border:1px solid var(--b);border-radius:6px;padding:14px;text-align:left;margin-bottom:16px">
+        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Bet Summary</div>
+        <div id="receipt-match" style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:2px"></div>
+        <div id="receipt-sel" style="font-size:12px;color:var(--t2);margin-bottom:10px"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">
+          <div style="text-align:center;background:var(--bg3);border-radius:4px;padding:8px">
+            <div class="gold mono" style="font-size:16px;font-weight:700" id="receipt-odds">—</div>
+            <div style="font-size:9px;color:var(--t3);margin-top:2px">ODDS</div>
+          </div>
+          <div style="text-align:center;background:var(--bg3);border-radius:4px;padding:8px">
+            <div class="mono" style="font-size:16px;font-weight:700;color:var(--cy)" id="receipt-stake">—</div>
+            <div style="font-size:9px;color:var(--t3);margin-top:2px">STAKE</div>
+          </div>
+          <div style="text-align:center;background:var(--bg3);border-radius:4px;padding:8px">
+            <div class="mono pos" style="font-size:16px;font-weight:700" id="receipt-return">—</div>
+            <div style="font-size:9px;color:var(--t3);margin-top:2px">TO WIN</div>
+          </div>
+        </div>
+      </div>
+      <div style="background:rgba(0,217,126,.08);border:1px solid rgba(0,217,126,.2);border-radius:6px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div style="font-size:11px;color:var(--t3)">New Balance</div>
+        <div class="mono" style="font-size:18px;font-weight:700;color:var(--g)" id="receipt-balance">€0.00</div>
+      </div>
+      <button class="btn bg" style="width:100%;padding:11px" onclick="closeReceipt()">Done — View My Trades</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ SETTLE MODAL ══ -->
 <div class="ov" id="settle-ov">
   <div class="md" style="width:380px">
@@ -952,6 +987,7 @@ async function apiFetch(path, opts={}) {
 
 // ═══════════════════════════════════ STATE ═══════════════════════════════════
 let STATE={bets:[],bankroll:{starting:500}};
+let _balanceLock=false; // prevents API from overwriting optimistic balance
 let editId=null,execRec=null,ticketRec=null;
 let chartEq,chartPerf,chartExpChart;
 
@@ -1005,7 +1041,7 @@ async function fetchPortfolio(){
     // Bankroll = API bankroll minus open stakes (deduct committed money)
     const trueBankroll = p.bankroll - (p.open_stake||0);
     const sgn=p.pnl>=0?'+':'';
-    document.getElementById('h-bk').textContent='€'+trueBankroll.toFixed(2);
+    if(!_balanceLock) document.getElementById('h-bk').textContent='€'+trueBankroll.toFixed(2);
     const dp=document.getElementById('h-dp');dp.textContent=sgn+'€'+Math.abs(p.pnl).toFixed(2);dp.style.color=p.pnl>=0?'var(--g)':'var(--r)';
     const ri=document.getElementById('h-roi');ri.textContent=sgn+p.roi.toFixed(2)+'%';ri.style.color=p.roi>=0?'var(--g)':'var(--r)';
     document.getElementById('h-exp').textContent='€'+p.open_stake.toFixed(0)+' / €'+(p.starting_bankroll*.2).toFixed(0);
@@ -1114,6 +1150,7 @@ async function initAPI(){
       ws.onmessage=e=>{
         try{const msg=JSON.parse(e.data);
           if(msg.type==='bet_created'||msg.type==='bet_updated'||msg.type==='bet_settled'||msg.type==='portfolio_updated'){fetchBets();fetchPortfolio();}
+          else if(msg.type==='reset'){STATE.bets=[];STATE.bankroll={starting:msg.bankroll||500};saveState();renderAll();showToast('🔄 Dashboard reset — bankroll set to €'+(msg.bankroll||500));}
           else if(msg.type==='recommendations_updated'){fetchRecommendations();}
           else if(msg.type==='news_updated'){fetchNews();}
           else if(msg.type==='matches_updated'){fetchMatches();}
@@ -1678,14 +1715,25 @@ async function confirmExec(){
   if(!execRec)return;
   const as=parseFloat(document.getElementById('bs-stake').value);
   const ao=parseFloat(document.getElementById('bs-actual-odds').value);
-  if(isNaN(as)||as<=0||isNaN(ao)||ao<=1){return;}
-  const prevBal=calcStats().bankroll;
-  const rec=execRec;
-  closeExec();
+  if(isNaN(as)||as<=0||isNaN(ao)||ao<=1)return;
 
-  // ── OPTIMISTIC: update local state immediately ──
+  // ── GUARD: insufficient funds ──
+  const s=calcStats();
+  if(as>s.bankroll+0.01){
+    document.getElementById('bs-confirm-btn').textContent='⚠ Insufficient funds';
+    document.getElementById('bs-confirm-btn').style.background='var(--r)';
+    setTimeout(()=>{updateBetSlip();document.getElementById('bs-confirm-btn').style.background='';},2000);
+    return;
+  }
+
+  const prevBal=s.bankroll;
+  const rec=execRec;
+  const profit=as*ao-as;
+  const tempId='b'+Date.now();
+
+  // ── STEP 1: add to state BEFORE closing modal ──
   const tempBet={
-    id:'b'+Date.now(),match:rec.match,date:rec.date||new Date().toISOString().split('T')[0],
+    id:tempId,match:rec.match,date:rec.date||new Date().toISOString().split('T')[0],
     market:rec.market,selection:rec.sel,recOdds:rec.odds,odds:ao,
     recStake:rec.stake,stake:as,confidence:rec.confidence||rec.conf||7,
     risk:rec.risk||'Moderate',
@@ -1695,12 +1743,23 @@ async function confirmExec(){
   };
   STATE.bets.push(tempBet);
   saveState();
-  renderAll();
-  animateBalance(prevBal,prevBal-as,'down');
-  showToast(`✓ Bet placed — €${as} on ${rec.sel}`);
-  switchTab('trades');
 
-  // ── BACKGROUND SYNC to API ──
+  // ── STEP 2: close bet slip ──
+  closeExec();
+
+  // ── STEP 3: update ALL displays immediately (lock API from overwriting) ──
+  _balanceLock=true;
+  renderAll();
+  setTimeout(()=>{_balanceLock=false;},4000); // release after 4s
+
+  // ── STEP 4: animate balance (slight delay so renderAll paints first) ──
+  const newBal=calcStats().bankroll;
+  setTimeout(()=>animateBalance(prevBal,newBal,'down'),60);
+
+  // ── STEP 5: show receipt ──
+  showReceipt(rec,as,ao,profit,newBal);
+
+  // ── STEP 6: background API sync (does NOT overwrite STATE.bets) ──
   if(API_BASE){
     try{
       const created=await apiFetch('/api/bets',{method:'POST',body:JSON.stringify({
@@ -1711,14 +1770,29 @@ async function confirmExec(){
         reasoning:'Placed via AI recommendation. '+(rec.rationale||rec.audit?.notes||''),
         is_accumulator:rec.isAccumulator||false,rec_id:rec.id||null
       })});
-      // Replace temp bet with server bet
+      // Only swap temp ID with server ID — do NOT call fetchBets/fetchPortfolio
+      // (those reassign STATE.bets and overwrite the just-placed local bet)
       if(created?.id){
-        const idx=STATE.bets.findIndex(b=>b.id===tempBet.id);
-        if(idx>=0)STATE.bets[idx]={...tempBet,...normalizeBet(created)};
+        const idx=STATE.bets.findIndex(b=>b.id===tempId);
+        if(idx>=0){STATE.bets[idx]={...tempBet,...normalizeBet(created)};saveState();}
       }
-      await fetchBets();await fetchPortfolio();
     }catch(e){console.warn('API bet save failed, kept in local state',e);}
   }
+}
+
+function showReceipt(rec,stake,odds,profit,newBal){
+  document.getElementById('receipt-match').textContent=rec.match+' · '+rec.market;
+  document.getElementById('receipt-sel').textContent=rec.sel;
+  document.getElementById('receipt-odds').textContent=odds.toFixed(2);
+  document.getElementById('receipt-stake').textContent='€'+stake.toFixed(2);
+  document.getElementById('receipt-return').textContent='+€'+profit.toFixed(2);
+  document.getElementById('receipt-balance').textContent='€'+newBal.toFixed(2);
+  document.getElementById('receipt-ov').classList.add('open');
+}
+
+function closeReceipt(){
+  document.getElementById('receipt-ov').classList.remove('open');
+  switchTab('trades');
 }
 
 function closeExec(){document.getElementById('exec-ov').classList.remove('open');execRec=null;}
@@ -2633,4 +2707,51 @@ async function placeBasket(){
     // Quiet re-sync — update local state from API truth
     try{
       const bets=await apiFetch('/api/bets');
-  
+      STATE.bets=bets.map(normalizeBet);
+      saveState();
+      updateHeader();renderPositions();renderLedger();renderActionCenter();
+    }catch(e){}
+    // Sync portfolio from Railway (has authoritative bankroll)
+    try{await fetchPortfolio();}catch(e){}
+  }
+}
+
+// Track peak bankroll for drawdown multiplier
+function updatePeakBankroll(){
+  const s=calcStats();
+  if(!STATE.bankroll.peak||s.bankroll>STATE.bankroll.peak){
+    STATE.bankroll.peak=s.bankroll;
+  }
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');if(!t)return;
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(t._to);t._to=setTimeout(()=>t.style.opacity='0',2400);
+}
+
+// ═══════════════════════════ LEARNING LOG ═══════════════════════════
+function updateLearningLog(){
+  const el=document.getElementById('wa-learning-log');if(!el)return;
+  const s=calcStats();
+  if(!s.settled.length){el.innerHTML='<div style="color:var(--t3);font-size:11px">No settled bets yet. Learning log activates after first match result.</div>';return;}
+  const logs=STATE.learningLog||[];
+  if(!logs.length)el.innerHTML='<div style="color:var(--t3);font-size:11px">Settle positions to trigger model self-reflection.</div>';
+  else el.innerHTML=logs.map(l=>`<div style="padding:6px 0;border-bottom:1px solid rgba(26,37,64,.3);font-size:11px"><div style="color:var(--gold);font-family:var(--mono);margin-bottom:2px">${l.date||''}</div><div style="color:var(--t2)">${l.reflection||''}</div></div>`).join('');
+}
+
+// INIT
+function render(){updateHeader();renderPositions();renderLedger();renderMilestones();updateLearningLog();}
+
+window.onload=function(){
+  loadState();
+  updatePeakBankroll();
+  startClock();
+  renderAll();
+  initAgentIdentity();
+  initAPI();
+  updateBasketBadge();
+};
+</script>
+</body>
+</html>

@@ -27,31 +27,44 @@ class BettingAgent:
         """
         prompt = f"""
 You are an elite football betting analyst for the 2026 FIFA World Cup.
+Today: {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}
 
-LIVE DATA (as of {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}):
-
-MATCHES:
-{json.dumps(matches[:20], indent=2)}
+UPCOMING MATCHES:
+{json.dumps(matches[:30], indent=2)}
 
 CURRENT ODDS (Betclic France):
-{json.dumps(odds[:30], indent=2)}
+{json.dumps(odds[:40], indent=2)}
 
 BREAKING NEWS:
-{json.dumps(news[:10], indent=2)}
+{json.dumps(news[:15], indent=2)}
 
-Your task:
-1. Identify 2–5 high-value betting opportunities with POSITIVE expected value.
-2. Only recommend markets commonly available on Betclic France (1X2, DNB, O/U goals, BTTS, Group Winner, Qualification, Asian Handicap, Tournament Winner).
-3. Calculate model probability vs market implied probability.
-4. CRITICAL: If no edge exists (EV < 3%), output NO recommendations. A "no bet" decision is valid and professional.
-5. Consider injuries, form, correlation between bets, and market efficiency.
+Your task: Generate 8–15 high-value betting recommendations covering ALL upcoming matches, not just France.
 
-Return a JSON array. Each item must have these exact fields:
+MARKETS to cover (all available on Betclic France):
+- Match result (1X2), Draw No Bet
+- Asian Handicap (-0.5, -1, -1.5)
+- Over/Under goals (1.5, 2.5, 3.5)
+- Both Teams to Score (BTTS Yes/No)
+- First goalscorer (name the player)
+- Anytime goalscorer (name the player)
+- Correct score
+- Group Winner, To Qualify (Top 2)
+- Tournament Winner / Top 4
+- Player to be carded
+
+RULES:
+1. Cover every match in the next 7 days — do not focus only on France.
+2. For player props (first/anytime scorer), name the specific player (e.g. "Mbappé anytime scorer", "Vinicius Jr first scorer").
+3. Calculate model probability vs market implied probability. Only recommend if EV > 3%.
+4. Size stakes by Kelly fraction within bankroll limits.
+5. Mix markets — do not put 3+ bets on the same match.
+
+Return a JSON array. Each item:
 {{
   "match": "Team A vs Team B",
   "date": "YYYY-MM-DD",
   "market": "market type",
-  "selection": "what to bet on",
+  "selection": "exact selection (e.g. 'Mbappé anytime scorer', 'Over 2.5', 'France')",
   "odds": 1.75,
   "fair_odds": 1.60,
   "model_probability": 62.5,
@@ -68,14 +81,13 @@ Return a JSON array. Each item must have these exact fields:
   "betting_score": 8.2
 }}
 
-Stake sizing rules (bankroll = €500):
-- Confidence 9–10: max €25 (5%)
-- Confidence 7–8: max €15 (3%)
-- Confidence 5–6: max €10 (2%)
-- Below 5: don't recommend
+Stake sizing (bankroll = €500):
+- Confidence 9–10: €25 max
+- Confidence 7–8: €15 max
+- Confidence 5–6: €10 max
+- Below 5: skip
 
 Return ONLY the JSON array. No other text.
-If no valid opportunities exist, return an empty array: []
 """
         response = await client.messages.create(
             model=MODEL,
