@@ -29,6 +29,7 @@ def start_scheduler():
         refresh_odds,
         refresh_news,
         run_analysis_cycle,
+        auto_settle_bets,
     )
 
     # ── Live match data (every 15 seconds) ──────────────────────
@@ -81,6 +82,16 @@ def start_scheduler():
         id="afternoon_analysis",
         name="Afternoon Agent Analysis",
         max_instances=1,
+    )
+
+    # ── Auto-settle finished matches (every 5 minutes) ───────────
+    scheduler.add_job(
+        _run_async(auto_settle_bets),
+        trigger=IntervalTrigger(minutes=5),
+        id="auto_settle",
+        name="Auto-Settle Bets",
+        max_instances=1,
+        misfire_grace_time=60,
     )
 
     scheduler.start()

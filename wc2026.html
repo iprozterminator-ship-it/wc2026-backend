@@ -1112,7 +1112,7 @@ async function initAPI(){
       ws.onopen=()=>{wsRetry=0;updateWSIndicator(true);console.info('🔌 WebSocket connected');};
       ws.onmessage=e=>{
         try{const msg=JSON.parse(e.data);
-          if(msg.type==='bet_created'||msg.type==='bet_updated'||msg.type==='bet_settled'){fetchBets();fetchPortfolio();}
+          if(msg.type==='bet_created'||msg.type==='bet_updated'||msg.type==='bet_settled'||msg.type==='portfolio_updated'){fetchBets();fetchPortfolio();}
           else if(msg.type==='recommendations_updated'){fetchRecommendations();}
           else if(msg.type==='news_updated'){fetchNews();}
           else if(msg.type==='matches_updated'){fetchMatches();}

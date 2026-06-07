@@ -121,7 +121,9 @@ async def get_portfolio():
         else -b["actual_stake"]
         for b in settled
     )
-    bankroll = starting + pnl
+    # Deduct open stakes — money is committed the moment a bet is placed
+    open_stake_total = sum(b["actual_stake"] for b in open_bets)
+    bankroll = starting + pnl - open_stake_total
     roi = (pnl / starting * 100) if starting else 0
     won = [b for b in settled if b["status"] == "won"]
     win_rate = len(won) / len(settled) * 100 if settled else None
@@ -289,6 +291,140 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_text(json.dumps({"type": "ping"}))
     except WebSocketDisconnect:
         active_connections.remove(websocket)
+
+# ──────────────────────────────────────────────────────────────
+# AUTO-SETTLEMENT ENGINE
+# ──────────────────────────────────────────────────────────────
+
+def determine_bet_result(bet: dict, match: dict) -> str | None:
+    """
+    Returns 'won', 'lost', or None (if undetermined).
+    Handles: 1X2, Over/Under, BTTS, Double Chance, Asian Handicap -0.5
+    """
+    score_home = match.get("score_home")
+    score_away = match.get("score_away")
+    if score_home is None or score_away is None:
+        return None
+
+    home_name   = match.get("home", "").lower()
+    away_name   = match.get("away", "").lower()
+    selection   = bet.get("selection", "").lower().strip()
+    market      = bet.get("market", "").lower().strip()
+    total_goals = score_home + score_away
+
+    # ── 1X2 / Match Result ──────────────────────────────────────
+    if any(k in market for k in ("h2h", "1x2", "match result", "match winner", "win")):
+        if score_home > score_away:   # home win
+            won = selection in (home_name, "home", "1", "home win") or home_name in selection
+        elif score_home == score_away:  # draw
+            won = selection in ("draw", "x", "tie", "match draw")
+        else:                           # away win
+            won = selection in (away_name, "away", "2", "away win") or away_name in selection
+        return "won" if won else "lost"
+
+    # ── Over / Under ────────────────────────────────────────────
+    if "over" in selection or "under" in selection:
+        try:
+            parts = selection.split()
+            line = float(parts[-1])
+            if "over" in selection:
+                return "won" if total_goals > line else "lost"
+            else:
+                return "won" if total_goals < line else "lost"
+        except (ValueError, IndexError):
+            pass
+
+    # ── BTTS (Both Teams To Score) ──────────────────────────────
+    if "btts" in market or "both teams" in selection:
+        btts = score_home > 0 and score_away > 0
+        if "yes" in selection:
+            return "won" if btts else "lost"
+        if "no" in selection:
+            return "won" if not btts else "lost"
+
+    # ── Double Chance ────────────────────────────────────────────
+    if "double chance" in market or ("/" in selection and len(selection) <= 5):
+        sel = selection.replace(" ", "")
+        if sel in ("1/x", "home/draw"):
+            return "won" if score_home >= score_away else "lost"
+        if sel in ("x/2", "draw/away"):
+            return "won" if score_home <= score_away else "lost"
+        if sel in ("1/2", "home/away"):
+            return "won" if score_home != score_away else "lost"
+
+    # ── Asian Handicap -0.5 ──────────────────────────────────────
+    if "-0.5" in selection or "ah" in market or "handicap" in market:
+        if home_name in selection or "home" in selection:
+            return "won" if score_home > score_away else "lost"
+        if away_name in selection or "away" in selection:
+            return "won" if score_away > score_home else "lost"
+
+    # ── Team to win / qualify (outright-style on a single match) ─
+    if home_name in selection:
+        return "won" if score_home > score_away else "lost"
+    if away_name in selection:
+        return "won" if score_away > score_home else "lost"
+
+    return None  # Cannot determine — leave pending
+
+
+async def auto_settle_bets():
+    """
+    Runs every 5 min. Checks finished matches → auto-settles matching pending bets.
+    Triggers learning log and WebSocket broadcast for each settled bet.
+    """
+    try:
+        all_bets = await db.get_bets()
+        pending  = [b for b in all_bets if b["status"] == "pending"]
+        if not pending:
+            return
+
+        matches  = await fetcher.get_wc_matches()
+        finished = [m for m in matches if m.get("status") == "FINISHED"]
+        if not finished:
+            return
+
+        settled_count = 0
+        for match in finished:
+            home = match.get("home", "").lower()
+            away = match.get("away", "").lower()
+
+            for bet in pending:
+                bet_match = bet.get("match", "").lower()
+                # Match by team names appearing in the bet's match string
+                if home not in bet_match and away not in bet_match:
+                    continue
+
+                result = determine_bet_result(bet, match)
+                if result is None:
+                    continue
+
+                # Settle: closing odds = actual odds (no market data at close)
+                updates = {
+                    "status": result,
+                    "closing_odds": bet.get("actual_odds"),
+                }
+                settled_row = await db.update_bet(bet["id"], updates)
+                if settled_row:
+                    asyncio.create_task(generate_learning_entry({**bet, "status": result}))
+                    await broadcast({"type": "bet_settled", "bet": settled_row})
+                    settled_count += 1
+                    print(f"✅ Auto-settled: {bet.get('match')} — {bet.get('selection')} → {result.upper()}")
+
+        if settled_count:
+            await broadcast({"type": "portfolio_updated"})
+            print(f"🏦 Auto-settled {settled_count} bet(s). Broadcasting portfolio update.")
+
+    except Exception as e:
+        print(f"❌ auto_settle_bets error: {e}")
+
+
+@app.post("/api/internal/auto-settle")
+async def trigger_auto_settle():
+    """Manual trigger for auto-settlement (for testing)."""
+    await auto_settle_bets()
+    return {"ok": True}
+
 
 # ──────────────────────────────────────────────────────────────
 # AGENT ANALYSIS CYCLE (called by scheduler)
