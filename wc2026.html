@@ -1,0 +1,2659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WC2026 Trading Terminal</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#060a0f;--bg1:#090d14;--bg2:#0d1320;--bg3:#111a2e;--bg4:#162035;--b:#1a2540;--b2:#233050;--b3:#2d3d62;--g:#00d97e;--r:#ff3b5c;--gold:#f5a623;--blue:#2979ff;--blt:#5b9cf6;--pur:#7c5cfc;--cy:#00bcd4;--t1:#dce6f5;--t2:#8496b0;--t3:#46587a;--t4:#2a3a55;--mono:'JetBrains Mono',monospace;--sans:'Inter',system-ui,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}html,body{height:100%;background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px;overflow:hidden}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--b3);border-radius:2px}
+
+/* TICKER */
+#ticker{height:22px;background:#000;border-bottom:1px solid var(--b);display:flex;align-items:center;font-size:11px;font-family:var(--mono);overflow:hidden;flex-shrink:0}
+#ti{white-space:nowrap;animation:tk 90s linear infinite;color:var(--t2)}
+@keyframes tk{0%{transform:translateX(100vw)}100%{transform:translateX(-100%)}}
+
+/* HEADER */
+#hdr{height:46px;background:var(--bg1);border-bottom:1px solid var(--b);display:flex;align-items:center;padding:0 14px;gap:0;flex-shrink:0}
+.logo{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--blue);letter-spacing:1px;padding-right:14px;border-right:1px solid var(--b);white-space:nowrap}
+.hm{padding:0 12px;border-right:1px solid var(--b);min-width:80px}
+.hm .hl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:1px}
+.hm .hv{font-family:var(--mono);font-size:13px;font-weight:700}
+#hdr-r{margin-left:auto;display:flex;align-items:center;gap:0}
+#clock{font-family:var(--mono);font-size:11px;color:var(--t3);padding:0 12px;border-left:1px solid var(--b)}
+#bell{padding:0 12px;cursor:pointer;position:relative;font-size:15px;border-left:1px solid var(--b)}
+#ac{position:absolute;top:6px;right:6px;background:var(--r);color:#fff;font-size:9px;font-weight:700;border-radius:8px;padding:0 3px;min-width:13px;text-align:center}
+#wp-btn{padding:0 12px;border-left:1px solid var(--b);cursor:pointer;font-size:11px;font-weight:600;color:var(--g);letter-spacing:.5px;white-space:nowrap}
+#wp-btn:hover{color:#fff}
+
+/* NAV */
+#nav{height:34px;background:var(--bg1);border-bottom:1px solid var(--b);display:flex;align-items:flex-end;padding:0 14px;flex-shrink:0}
+#nav button{background:none;border:none;border-bottom:2px solid transparent;color:var(--t2);font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:0 12px 7px;cursor:pointer;transition:color .15s;font-family:var(--sans)}
+#nav button:hover{color:var(--t1)}
+#nav button.active{color:var(--blue);border-bottom-color:var(--blue)}
+.kb{font-size:9px;color:var(--t4);margin-left:2px}
+
+/* LAYOUT */
+#app{display:flex;flex-direction:column;height:100vh}
+#main{flex:1;overflow:hidden}
+.tab{display:none;height:100%;overflow-y:auto;padding:10px 12px}
+.tab.active{display:block}
+
+/* PANELS */
+.pn{background:var(--bg2);border:1px solid var(--b);border-radius:4px}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--b);flex-shrink:0}
+.pt{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t2)}
+.pm{font-size:10px;color:var(--t3);font-family:var(--mono)}
+.pb{padding:8px 10px}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+
+/* STATS */
+.st{background:var(--bg2);border:1px solid var(--b);border-radius:4px;padding:9px 12px}
+.sl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:3px;font-weight:700}
+.sv{font-family:var(--mono);font-size:19px;font-weight:700}
+.sd{font-size:10px;color:var(--t3);margin-top:2px;font-family:var(--mono)}
+
+/* TABLES */
+.dt{width:100%;border-collapse:collapse}
+.dt th{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--t3);padding:5px 8px;text-align:left;border-bottom:1px solid var(--b);white-space:nowrap;font-weight:600}
+.dt th.r,.dt td.r{text-align:right}.dt th.c,.dt td.c{text-align:center}
+.dt td{padding:5px 8px;border-bottom:1px solid rgba(26,37,64,.4);font-size:12px;white-space:nowrap}
+.dt tr:last-child td{border-bottom:none}.dt tr:hover td{background:rgba(255,255,255,.02);cursor:pointer}
+
+/* CHIPS */
+.chip{display:inline-block;padding:1px 6px;border-radius:2px;font-size:10px;font-weight:700;font-family:var(--mono)}
+.cg{background:rgba(0,217,126,.12);color:var(--g);border:1px solid rgba(0,217,126,.25)}
+.cr{background:rgba(255,59,92,.12);color:var(--r);border:1px solid rgba(255,59,92,.25)}
+.cgold{background:rgba(245,166,35,.12);color:var(--gold);border:1px solid rgba(245,166,35,.25)}
+.cb{background:rgba(41,121,255,.12);color:var(--blt);border:1px solid rgba(41,121,255,.25)}
+.cpur{background:rgba(124,92,252,.12);color:var(--pur);border:1px solid rgba(124,92,252,.3)}
+.cdim{background:rgba(70,88,122,.15);color:var(--t2);border:1px solid var(--b)}
+
+/* COLORS */
+.pos{color:var(--g);font-family:var(--mono)}.neg{color:var(--r);font-family:var(--mono)}.neu{color:var(--t2);font-family:var(--mono)}.gold{color:var(--gold);font-family:var(--mono)}
+
+/* OPPORTUNITY ROW */
+.or{display:grid;grid-template-columns:150px 130px 52px 58px 58px 50px 50px 68px 80px;align-items:center;padding:6px 10px;border-bottom:1px solid rgba(26,37,64,.35);gap:4px;cursor:pointer;transition:background .1s}
+.or:hover{background:rgba(41,121,255,.05)}
+.oh{display:grid;grid-template-columns:150px 130px 52px 58px 58px 50px 50px 68px 80px;padding:4px 10px;gap:4px;border-bottom:1px solid var(--b)}
+.oh span{font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--t3);font-weight:600}
+
+/* ACTION CENTER */
+.action-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid rgba(26,37,64,.4);transition:background .1s}
+.action-item:hover{background:rgba(41,121,255,.04)}
+.action-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ad-p{background:var(--blue)}.ad-r{background:var(--r)}.ad-g{background:var(--g)}.ad-y{background:var(--gold)}
+.action-body{flex:1}
+.action-title{font-size:12px;font-weight:600}
+.action-sub{font-size:10px;color:var(--t2);margin-top:1px}
+.action-deadline{font-family:var(--mono);font-size:10px;color:var(--gold);min-width:80px;text-align:right}
+
+/* ACCUMULATOR */
+.acc-card{background:var(--bg2);border:1px solid var(--b);border-radius:4px;padding:12px;margin-bottom:8px}
+.acc-type{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.acc-legs{display:flex;flex-direction:column;gap:4px;margin:8px 0}
+.acc-leg{display:flex;align-items:center;gap:8px;padding:5px 8px;background:var(--bg3);border-radius:3px;font-size:12px}
+.acc-metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0;background:var(--bg3);border-radius:4px;padding:8px}
+.acc-m .av{font-family:var(--mono);font-size:15px;font-weight:700}
+.acc-m .al{font-size:9px;color:var(--t3);margin-top:1px;text-transform:uppercase}
+
+/* MILESTONE */
+.milestone{background:var(--bg2);border:1px solid var(--b);border-radius:4px;padding:10px 12px;margin-bottom:6px}
+.ms-bar{height:5px;background:var(--b);border-radius:3px;overflow:hidden;margin:6px 0 4px}
+.ms-fill{height:100%;border-radius:3px;transition:width .5s}
+
+/* LIVE MATCH */
+.lm{background:var(--bg2);border:1px solid var(--b);border-radius:4px;padding:10px 12px;margin-bottom:8px}
+.lm-status{font-size:9px;font-weight:700;letter-spacing:1px;font-family:var(--mono);margin-bottom:6px}
+.lm-score{font-family:var(--mono);font-size:28px;font-weight:700;text-align:center;margin:6px 0}
+.lm-teams{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:8px}
+.lm-team{font-size:14px;font-weight:600}
+.lm-team.away{text-align:right}
+
+/* NEWS */
+.ni{padding:8px 10px;border-bottom:1px solid rgba(26,37,64,.4);cursor:pointer}
+.ni:hover{background:rgba(255,255,255,.02)}
+.ni .nt{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px}
+.ni .nh{font-size:12px;font-weight:600;color:var(--t1);line-height:1.4}
+.ni .nm{font-size:10px;color:var(--t3);margin-top:2px;font-family:var(--mono)}
+
+/* FIXTURE */
+.fx{padding:6px 10px;border-bottom:1px solid rgba(26,37,64,.35);display:flex;align-items:center;gap:8px}
+.fx-d{font-size:10px;color:var(--t3);font-family:var(--mono);min-width:65px}
+.fx-t{flex:1;font-size:12px}
+.fx-odds{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;min-width:120px}
+.fx-o{text-align:center;background:var(--bg3);border:1px solid var(--b);border-radius:2px;padding:2px 4px;font-family:var(--mono);font-size:11px;color:var(--gold);cursor:pointer}
+.fx-o:hover{border-color:var(--b3)}
+
+/* SHARE MODE */
+#share-banner{display:none;background:linear-gradient(90deg,var(--bg3),var(--bg2));border-bottom:1px solid var(--b3);padding:6px 14px;font-size:11px;color:var(--t2);align-items:center;gap:8px;flex-shrink:0}
+body.share-mode #share-banner{display:flex}
+body.share-mode .share-hide{display:none!important}
+
+/* RISK BAR */
+.rb{height:3px;border-radius:2px;background:var(--b);overflow:hidden;margin-top:3px}
+.rf{height:100%;border-radius:2px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:3px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .15s;font-family:var(--sans)}
+.bp{background:var(--blue);color:#fff}.bp:hover{background:#1a65e8}
+.bg{background:rgba(0,217,126,.15);color:var(--g);border:1px solid rgba(0,217,126,.3)}.bg:hover{background:rgba(0,217,126,.25)}
+.bo{background:transparent;color:var(--t2);border:1px solid var(--b2)}.bo:hover{border-color:var(--b3);color:var(--t1)}
+.bsm{padding:3px 8px;font-size:10px}
+
+/* MODALS */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;align-items:center;justify-content:center}
+.ov.open{display:flex}
+.md{background:var(--bg1);border:1px solid var(--b2);border-radius:6px;max-height:90vh;overflow-y:auto}
+.mh{padding:12px 16px;border-bottom:1px solid var(--b);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg1);z-index:5}
+.mh h3{font-size:14px;font-weight:700}
+.mb{padding:16px}
+.cl{background:none;border:none;color:var(--t2);font-size:20px;cursor:pointer;line-height:1}
+
+/* FORM */
+.fg{margin-bottom:10px}
+.fg label{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--t3);margin-bottom:4px;font-weight:700}
+.fg input,.fg select,.fg textarea{width:100%;background:var(--bg3);border:1px solid var(--b2);border-radius:3px;padding:7px 9px;color:var(--t1);font-size:13px;font-family:var(--sans)}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--blue)}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* EXEC MODAL */
+.exec-recommended{background:var(--bg3);border:1px solid var(--b);border-radius:3px;padding:10px 12px;margin-bottom:12px}
+.exec-diff{font-size:10px;color:var(--gold);font-family:var(--mono);margin-top:3px}
+
+/* BET SLIP */
+.bs-sel{background:linear-gradient(135deg,rgba(41,121,255,.08) 0%,rgba(0,217,126,.05) 100%);border:1px solid rgba(41,121,255,.25);border-radius:6px;padding:14px 16px;margin-bottom:14px}
+.bs-odds-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.bs-stat{background:var(--bg2);border:1px solid var(--b);border-radius:4px;padding:8px 10px;text-align:center}
+.bs-stat-v{font-family:var(--mono);font-size:18px;font-weight:700;line-height:1}
+.bs-stat-l{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-top:3px}
+.bs-quick{display:flex;gap:6px;margin:8px 0 4px}
+.bs-quick button{flex:1;padding:6px 0;border:1px solid var(--b2);border-radius:3px;background:var(--bg3);color:var(--t2);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--mono)}
+.bs-quick button:hover,.bs-quick button.active{border-color:var(--g);color:var(--g);background:rgba(0,217,126,.08)}
+.bs-stake-input{width:100%;background:var(--bg3);border:1px solid var(--b2);border-radius:4px;padding:12px 14px;color:var(--t1);font-size:22px;font-weight:700;font-family:var(--mono);text-align:center;letter-spacing:1px;transition:border-color .2s}
+.bs-stake-input:focus{outline:none;border-color:var(--blue)}
+.bs-calc{background:var(--bg2);border:1px solid var(--b);border-radius:4px;padding:10px 14px;margin:12px 0}
+.bs-calc-row{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid rgba(26,37,64,.35)}
+.bs-calc-row:last-child{border:none}
+.bs-balance{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.bs-bal-box{background:var(--bg2);border:1px solid var(--b);border-radius:4px;padding:10px 12px}
+.bs-bal-label{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.bs-bal-val{font-family:var(--mono);font-size:16px;font-weight:700}
+.bs-confirm{width:100%;padding:13px;background:linear-gradient(135deg,#00c96a,#00b85c);border:none;border-radius:5px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px;transition:all .2s;font-family:var(--sans)}
+.bs-confirm:hover{background:linear-gradient(135deg,#00e07a,#00cc65);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,217,126,.25)}
+.bs-confirm:disabled{background:rgba(0,217,126,.2);color:rgba(0,217,126,.4);transform:none;cursor:not-allowed}
+.bs-sub{text-align:center;font-size:10px;color:var(--t3);margin-top:8px}
+/* SETTLE MODAL */
+.settle-outcome{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:14px 0}
+.settle-btn{padding:14px;border-radius:5px;font-size:13px;font-weight:700;cursor:pointer;border:2px solid;text-align:center;transition:all .2s;font-family:var(--sans)}
+.settle-won{border-color:rgba(0,217,126,.3);background:rgba(0,217,126,.08);color:var(--g)}
+.settle-won.sel{border-color:var(--g);background:rgba(0,217,126,.2);box-shadow:0 0 0 3px rgba(0,217,126,.15)}
+.settle-lost{border-color:rgba(255,59,92,.3);background:rgba(255,59,92,.08);color:var(--r)}
+.settle-lost.sel{border-color:var(--r);background:rgba(255,59,92,.2);box-shadow:0 0 0 3px rgba(255,59,92,.15)}
+.settle-void{border-color:var(--b2);background:var(--bg3);color:var(--t2)}
+.settle-void.sel{border-color:var(--t2);background:var(--bg2);box-shadow:0 0 0 3px rgba(70,88,122,.2)}
+/* BALANCE ANIMATION */
+@keyframes balFlash{0%{opacity:1;transform:scale(1)}30%{opacity:.4;transform:scale(.95)}70%{opacity:.8;transform:scale(1.02)}100%{opacity:1;transform:scale(1)}}
+.bal-flash{animation:balFlash .45s ease}
+@keyframes numUp{from{color:var(--g);text-shadow:0 0 8px rgba(0,217,126,.4)} to{color:inherit;text-shadow:none}}
+@keyframes numDown{from{color:var(--r);text-shadow:0 0 8px rgba(255,59,92,.4)} to{color:inherit;text-shadow:none}}
+.num-up{animation:numUp .8s ease}
+.num-down{animation:numDown .8s ease}
+
+/* SETTINGS */
+.srow{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(26,37,64,.4)}
+.srow:last-child{border:none}
+
+/* WA MODAL */
+.wa-output{background:#000;border:1px solid var(--b2);border-radius:4px;padding:14px;font-family:var(--mono);font-size:12px;line-height:1.8;white-space:pre-wrap;color:var(--t1);margin-bottom:12px;max-height:400px;overflow-y:auto}
+
+/* ALERT ITEM */
+.ali{display:flex;align-items:flex-start;gap:8px;padding:7px 10px;border-bottom:1px solid rgba(26,37,64,.35)}
+.ali-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.ahi .ali-dot{background:var(--r)}.amd .ali-dot{background:var(--gold)}.alo .ali-dot{background:var(--g)}
+.ali-t{font-size:11px;font-weight:600}.ali-s{font-size:10px;color:var(--t2);margin-top:1px}
+
+/* CHART */
+.ch{height:160px;position:relative;padding:6px 10px}
+.ch-lg{height:200px;position:relative;padding:6px 10px}
+
+/* BASKET DRAWER */
+#basket-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:800;display:none;cursor:pointer}
+#basket-overlay.open{display:block}
+#basket-drawer{position:fixed;top:0;right:0;width:360px;height:100vh;background:var(--bg1);border-left:1px solid var(--b2);z-index:850;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:-12px 0 48px rgba(0,0,0,.7)}
+#basket-drawer.open{transform:translateX(0)}
+#basket-btn{padding:0 12px;cursor:pointer;border-left:1px solid var(--b);display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.3px;transition:color .15s}
+#basket-btn:hover,#basket-btn.has-items{color:var(--gold)}
+#run-agent-btn:hover{color:var(--cy)}
+#basket-badge{background:var(--gold);color:#000;font-size:9px;font-weight:700;border-radius:8px;padding:1px 5px;min-width:15px;text-align:center;display:none}
+#basket-badge.show{display:inline-block}
+.bk-tab{flex:1;padding:8px 0;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;border-bottom:2px solid transparent;cursor:pointer;color:var(--t3);transition:all .15s}
+.bk-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.bk-item{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-bottom:1px solid rgba(26,37,64,.5);transition:background .1s}
+.bk-item:hover{background:rgba(255,255,255,.01)}
+.bk-remove{background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer;line-height:1;padding:0;flex-shrink:0;transition:color .15s;margin-top:1px}
+.bk-remove:hover{color:var(--r)}
+.bk-stake-in{background:var(--bg3);border:1px solid var(--b2);border-radius:3px;padding:4px 8px;color:var(--gold);font-family:var(--mono);font-size:13px;font-weight:700;text-align:center;width:68px}
+.bk-stake-in:focus{outline:none;border-color:var(--gold)}
+.bk-place-btn{width:100%;padding:13px;background:linear-gradient(135deg,#f5a623,#e0951a);border:none;border-radius:4px;color:#000;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.2px;transition:all .2s;font-family:var(--sans)}
+.bk-place-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 16px rgba(245,166,35,.35)}
+.bk-place-btn:disabled{background:rgba(245,166,35,.15);color:rgba(245,166,35,.4);cursor:not-allowed;transform:none}
+/* MATCH BROWSER */
+.mb-match{background:var(--bg2);border:1px solid var(--b);border-radius:4px;margin-bottom:6px;overflow:hidden;transition:border-color .15s}
+.mb-match:hover{border-color:var(--b2)}
+.mb-match-hdr{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;transition:background .15s}
+.mb-match-hdr:hover{background:rgba(41,121,255,.04)}
+.mb-markets{display:none;padding:10px 12px 12px;border-top:1px solid var(--b)}
+.mb-markets.open{display:block}
+.mk-type-row{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.mk-type-btn{padding:4px 10px;border:1px solid var(--b2);border-radius:3px;background:var(--bg3);color:var(--t2);font-size:10px;font-weight:600;cursor:pointer;transition:all .15s}
+.mk-type-btn:hover,.mk-type-btn.active{border-color:var(--blt);color:var(--blt);background:rgba(91,156,246,.08)}
+.mk-options{flex-wrap:wrap;gap:5px;display:none}
+.mk-options.show{display:flex}
+.mk-opt{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg3);border:1px solid var(--b);border-radius:3px;cursor:pointer;transition:all .15s;flex:1;min-width:140px}
+.mk-opt:hover{border-color:var(--gold);background:rgba(245,166,35,.05)}
+.mk-opt.has-ev{border-color:rgba(0,217,126,.2)}
+.mk-opt .mo-sel{font-size:11px;font-weight:600;flex:1;color:var(--t1)}
+.mk-opt .mo-odds{font-family:var(--mono);color:var(--gold);font-size:13px;font-weight:700;white-space:nowrap}
+.mk-opt .mo-ev{font-size:9px;color:var(--t3);font-family:var(--mono);white-space:nowrap}
+.mk-opt.has-ev .mo-ev{color:var(--g)}
+/* OUTRIGHTS */
+.otr-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.otr-item{background:var(--bg3);border:1px solid var(--b);border-radius:3px;padding:8px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:all .15s}
+.otr-item:hover{border-color:var(--b2);background:rgba(255,255,255,.02)}
+/* ENV BADGE */
+.env-badge{display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:600;padding:1px 5px;border-radius:2px;font-family:var(--mono);letter-spacing:.05em}
+.env-alt{background:rgba(124,92,252,.15);color:var(--pur);border:1px solid rgba(124,92,252,.3)}
+.env-heat{background:rgba(255,59,92,.1);color:var(--r);border:1px solid rgba(255,59,92,.25)}
+.env-ok{background:rgba(0,217,126,.08);color:var(--g);border:1px solid rgba(0,217,126,.2)}
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg1);border:1px solid var(--b2);border-radius:4px;padding:9px 18px;font-size:12px;font-weight:600;color:var(--t1);z-index:9999;transition:opacity .3s;pointer-events:none;opacity:0}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- TICKER -->
+<div id="ticker"><div id="ti"></div></div>
+
+<!-- SHARE BANNER -->
+<div id="share-banner">
+  <span style="color:var(--g);font-weight:700">👁 READ ONLY</span>
+  <span style="color:var(--b3)">|</span>
+  <span>You're viewing <strong style="color:var(--t1)">Tarek's WC2026 Trading Terminal</strong> — live performance tracker for the 2026 FIFA World Cup</span>
+  <span style="margin-left:auto;color:var(--t3)">Bets placed manually · Powered by Claude AI · Model v4</span>
+</div>
+
+<!-- HEADER -->
+<div id="hdr">
+  <div class="logo">WC2026 · TRADING TERMINAL<span style="font-size:9px;font-weight:600;background:var(--pur);color:#fff;padding:2px 7px;border-radius:3px;margin-left:8px;letter-spacing:.08em;vertical-align:middle">MODEL v4</span></div>
+  <div class="hm" style="margin-left:12px"><div class="hl">Bankroll</div><div class="hv" id="h-bk">€500.00</div></div>
+  <div class="hm"><div class="hl">Daily P&L</div><div class="hv" id="h-dp">+€0.00</div></div>
+  <div class="hm"><div class="hl">Tournament ROI</div><div class="hv" id="h-roi">+0.00%</div></div>
+  <div class="hm"><div class="hl">Exposure</div><div class="hv" id="h-exp" style="color:var(--t2)">€0 / €100</div></div>
+  <div class="hm"><div class="hl">Open</div><div class="hv" id="h-open" style="color:var(--t2)">0</div></div>
+  <div class="hm"><div class="hl">Win Rate</div><div class="hv" id="h-wr" style="color:var(--t2)">—</div></div>
+  <div class="hm" style="border-right:none"><div class="hl">Goal</div><div class="hv" id="h-goal" style="color:var(--gold)">€500→€1K</div></div>
+  <div id="hdr-r">
+    <div id="ws-status" title="Live connection status" style="display:flex;align-items:center;gap:5px;padding:0 12px;border-left:1px solid var(--b);font-family:var(--mono);font-size:10px;color:var(--t3);cursor:default">
+      <span id="ws-dot" style="width:6px;height:6px;border-radius:50%;background:var(--r);display:inline-block;transition:background .3s"></span>
+      <span id="ws-label">OFFLINE</span>
+    </div>
+    <div id="run-agent-btn" onclick="runAgentManual()" title="Manually trigger AI analysis cycle" style="padding:0 12px;cursor:pointer;border-left:1px solid var(--b);display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.3px;transition:color .15s">
+      ⚡ Run Agent
+    </div>
+    <div id="basket-btn" onclick="toggleBasket()">🛒 Basket <span id="basket-badge">0</span></div>
+    <div id="wp-btn" onclick="openWA()">📲 Daily Brief</div>
+    <div id="bell" onclick="switchTab('control')">🔔<span id="ac">3</span></div>
+    <div id="clock">04 JUN 2026 &nbsp;00:00:00</div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<!-- NAV -->
+<div id="nav">
+  <button class="active" onclick="switchTab('dashboard')">Dashboard <span class="kb">1</span></button>
+  <button onclick="switchTab('markets')">Markets <span class="kb">2</span></button>
+  <button onclick="switchTab('trades')">Trades <span class="kb">3</span></button>
+  <button onclick="switchTab('live')">Live <span class="kb">4</span></button>
+  <button class="share-hide" onclick="switchTab('control')">Control <span class="kb">5</span></button>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+<!-- ═══ DASHBOARD ═══ -->
+<div id="tab-dashboard" class="tab active">
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:8px;height:100%">
+    <div style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;padding-bottom:8px">
+      <!-- KPIs -->
+      <div class="g5">
+        <div class="st"><div class="sl">Bankroll</div><div class="sv" id="d-bk">€500.00</div><div class="sd">Start: €500</div></div>
+        <div class="st"><div class="sl">Total P&L</div><div class="sv" id="d-pnl">+€0.00</div><div class="sd" id="d-roi">ROI 0.0%</div></div>
+        <div class="st"><div class="sl">Win Rate</div><div class="sv" id="d-wr">—</div><div class="sd" id="d-settled">0 settled</div></div>
+        <div class="st"><div class="sl">Open Positions</div><div class="sv" id="d-open" style="color:var(--t2)">0</div><div class="sd" id="d-exp">€0 exposed</div></div>
+        <div class="st"><div class="sl">Streak</div><div class="sv" id="d-streak">0</div><div class="sd">consecutive ✓</div></div>
+      </div>
+      <!-- Equity + Milestone -->
+      <div class="g2">
+        <div class="pn">
+          <div class="ph"><span class="pt">Equity Curve</span><span class="pm" id="eq-meta">€500.00</span></div>
+          <div class="ch-lg"><canvas id="chart-eq"></canvas></div>
+        </div>
+        <div class="pn">
+          <div class="ph"><span class="pt">Capital Milestones</span></div>
+          <div class="pb" id="milestones-panel"></div>
+        </div>
+      </div>
+      <!-- Action Center -->
+      <div class="pn">
+        <div class="ph"><span class="pt">⚡ Action Center — Pending</span><span class="pm" id="action-count">6 actions</span></div>
+        <div id="action-center"></div>
+      </div>
+      <!-- Top Opportunities -->
+      <div class="pn">
+        <div class="ph"><span class="pt">Today's Approved Opportunities</span><button class="btn bg bsm share-hide" onclick="openWA()">📲 Share Card</button></div>
+        <div class="oh"><span>Match</span><span>Selection</span><span>Odds</span><span>Model%</span><span>EV</span><span>Stake</span><span>CLV / Uncert</span><span>Audit</span><span>Action</span></div>
+        <div id="dash-feed"></div>
+      </div>
+    </div>
+    <!-- RIGHT PANEL -->
+    <div style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;padding-bottom:8px">
+      <div class="pn">
+        <div class="ph"><span class="pt" style="color:var(--r)">▲ Alerts</span><span class="pm">3 active</span></div>
+        <div id="d-alerts"></div>
+      </div>
+      <div class="pn">
+        <div class="ph"><span class="pt">Open Positions</span><button class="btn bp bsm" onclick="openBetModal()">+ Log</button></div>
+        <div id="d-positions"></div>
+      </div>
+      <div class="pn" style="flex:1">
+        <div class="ph"><span class="pt">Upcoming Fixtures</span></div>
+        <div id="d-fixtures" style="overflow-y:auto;max-height:220px"></div>
+      </div>
+      <div class="pn">
+        <div class="ph"><span class="pt">News</span><span class="pm" style="color:var(--g)">● Live</span></div>
+        <div id="d-news" style="overflow-y:auto;max-height:180px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MARKETS ═══ -->
+<div id="tab-markets" class="tab">
+  <div style="display:flex;flex-direction:column;gap:8px;height:100%;overflow-y:auto;padding-bottom:8px">
+    <!-- MATCH BROWSER -->
+    <div class="pn">
+      <div class="ph">
+        <div><span class="pt">Browse All Matches</span><div style="font-size:10px;color:var(--t3);margin-top:1px">Click a match · All markets · Model odds + EV · Add to Basket</div></div>
+        <span class="chip cpur" style="font-size:9px">POISSON MODEL v4</span>
+      </div>
+      <div class="pb" id="match-browser" style="padding:8px"></div>
+    </div>
+    <!-- TOURNAMENT OUTRIGHTS -->
+    <div class="pn">
+      <div class="ph">
+        <span class="pt">Tournament Outrights</span>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="mk-type-btn active" id="otr-btn-all" onclick="filterOutrights('all',this)">All</button>
+          <button class="mk-type-btn" onclick="filterOutrights('Group Winners',this)">Group Win</button>
+          <button class="mk-type-btn" onclick="filterOutrights('Qualify from Group (Top 2)',this)">Qualify</button>
+          <button class="mk-type-btn" onclick="filterOutrights('Reach Quarter Finals',this)">Reach QF</button>
+          <button class="mk-type-btn" onclick="filterOutrights('Reach Semi Finals',this)">Reach SF</button>
+          <button class="mk-type-btn" onclick="filterOutrights('Tournament Winner',this)">Win WC</button>
+        </div>
+      </div>
+      <div id="outrights-grid" class="pb" style="padding:8px"></div>
+    </div>
+    <!-- AI RECOMMENDATIONS -->
+    <div class="pn">
+      <div class="ph"><span class="pt">AI Recommendations — Approved Singles</span><span class="pm" style="color:var(--g)">Model v4 · Audit verified</span></div>
+      <div class="oh"><span>Match</span><span>Selection</span><span>Odds</span><span>Model%</span><span>EV</span><span>Stake</span><span>CLV / Uncert</span><span>Audit</span><span>Action</span></div>
+      <div id="mkt-singles"></div>
+    </div>
+    <!-- ACCUMULATOR ENGINE -->
+    <div class="pn">
+      <div class="ph"><span class="pt">Accumulator Engine — AI Built</span><span class="pm">Mixed-market validated · Correlation checked</span></div>
+      <div style="padding:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px" id="acc-grid"></div>
+    </div>
+    <!-- DAILY CARD -->
+    <div class="pn">
+      <div class="ph"><span class="pt">Daily Betting Card</span><span class="pm">Tier 1/2/3</span></div>
+      <div id="daily-card" style="padding:10px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TRADES (Portfolio + Ledger merged) ═══ -->
+<div id="tab-trades" class="tab">
+  <div style="display:flex;flex-direction:column;gap:8px;height:100%;overflow-y:auto">
+    <div class="g4">
+      <div class="st"><div class="sl">Total Bankroll</div><div class="sv" id="p-bk">€500.00</div><div class="sd">Start: €500</div></div>
+      <div class="st"><div class="sl">Total P&L</div><div class="sv" id="p-pnl">+€0.00</div><div class="sd" id="p-roi">ROI 0.0%</div></div>
+      <div class="st"><div class="sl">Win Rate</div><div class="sv" id="p-wr">—</div><div class="sd" id="p-set">0 settled</div></div>
+      <div class="st"><div class="sl">Avg CLV</div><div class="sv" id="tr-clv">—</div><div class="sd">Target: +2%</div></div>
+    </div>
+    <div class="g2">
+      <div class="pn"><div class="ph"><span class="pt">Performance</span></div><div class="ch"><canvas id="chart-perf"></canvas></div></div>
+      <div class="pn"><div class="ph"><span class="pt">Exposure by Market</span></div><div style="height:160px;display:flex;align-items:center;justify-content:center;padding:6px"><canvas id="chart-exp" style="max-width:160px"></canvas></div></div>
+    </div>
+    <div class="g3">
+      <div class="pn"><div class="ph"><span class="pt">Allocation</span></div>
+        <div class="pb">
+          <div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:600">Singles</span><span style="font-family:var(--mono);font-weight:700;color:var(--g)">70%</span></div><div class="rb"><div class="rf" style="width:70%;background:var(--g)"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">Foundation — highest quality</div></div>
+          <div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:600">Accumulators</span><span style="font-family:var(--mono);font-weight:700;color:var(--gold)">20%</span></div><div class="rb"><div class="rf" style="width:20%;background:var(--gold)"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">Optimised combos — audit verified</div></div>
+          <div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:600">Futures</span><span style="font-family:var(--mono);font-weight:700;color:var(--blt)">10%</span></div><div class="rb"><div class="rf" style="width:10%;background:var(--blt)"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">Long-term tournament bets</div></div>
+        </div>
+      </div>
+      <div class="pn"><div class="ph"><span class="pt">Institutional Kelly Sizing — v4</span><span class="pm">Fractional Kelly · Uncertainty-Adjusted</span></div>
+        <div class="pb">
+          <div style="background:#0a0e1a;border:1px solid rgba(124,92,252,.3);border-radius:4px;padding:10px 12px;margin-bottom:10px;font-size:11px;line-height:1.8;font-family:var(--mono)">
+            <div style="color:var(--pur);font-size:9px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:6px">Formula (Fractional Kelly × Uncertainty × DD Mult)</div>
+            <div style="color:var(--t2)"><span style="color:var(--cy)">Full Kelly</span> = (p × (odds−1) − (1−p)) / (odds−1)</div>
+            <div style="color:var(--t2)"><span style="color:var(--g)">Stake</span> = Bankroll × Full Kelly × <span style="color:var(--gold)">0.40</span> × (1 − uncertainty×0.8) × DD_mult</div>
+            <div style="color:var(--t3);font-size:10px;margin-top:4px">Max: €25 · Min profit: €5 · Min odds: 1.40 · KO stage: stake × 0.78-0.88</div>
+          </div>
+          <table class="dt"><thead><tr><th>Drawdown</th><th>DD Mult</th><th>Mode</th><th class="r">Action</th></tr></thead><tbody>
+            <tr><td>&lt;5%</td><td><span class="chip cg">1.00</span></td><td>Normal</td><td class="r mono pos">Full stakes</td></tr>
+            <tr><td>5–10%</td><td><span class="chip cgold">0.75</span></td><td>Caution</td><td class="r mono gold">−25% stakes</td></tr>
+            <tr><td>10–20%</td><td><span class="chip cr">0.50</span></td><td>Stress</td><td class="r mono neg">−50% stakes</td></tr>
+            <tr><td>&gt;20%</td><td><span class="chip cr">0.25</span></td><td>Preserve</td><td class="r mono neg">−75% stakes</td></tr>
+          </tbody></table>
+        </div>
+      </div>
+      <div class="pn"><div class="ph"><span class="pt">Open Positions</span><button class="btn bp bsm share-hide" onclick="openBetModal()">+ Log Trade</button></div><div id="p-open-tbl"><div style="padding:14px;color:var(--t3);font-size:12px">No positions.</div></div></div>
+    </div>
+    <div class="pn">
+      <div class="ph"><span class="pt">Trade Ledger</span><span class="pm" id="tr-summary"></span></div>
+      <div style="overflow-x:auto">
+        <table class="dt" style="min-width:860px">
+          <thead><tr><th>Date</th><th>Match</th><th>Market</th><th>Selection</th><th class="r">Rec Odds</th><th class="r">Act Odds</th><th class="r">Stake</th><th class="c">Conf</th><th class="c">Type</th><th class="c">Status</th><th class="r">P&L</th><th class="r">CLV</th><th class="share-hide">Actions</th></tr></thead>
+          <tbody id="ledger-body"><tr><td colspan="13" style="padding:18px;text-align:center;color:var(--t3)">No trades logged.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ LIVE (Live + News merged) ═══ -->
+<div id="tab-live" class="tab">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;height:100%">
+    <div style="display:flex;flex-direction:column;gap:8px;overflow-y:auto">
+      <div class="pn">
+        <div class="ph"><span class="pt" style="color:var(--r)">● Live Center</span><span class="pm" id="live-refresh">Auto-refresh 10s</span></div>
+        <div id="live-matches" style="padding:8px"></div>
+      </div>
+      <div class="pn">
+        <div class="ph"><span class="pt">Upcoming — Next 48h</span></div>
+        <div id="live-upcoming"></div>
+      </div>
+      <div class="pn"><div class="ph"><span class="pt">Live Opportunities</span></div><div id="live-opps" style="padding:8px;font-size:12px;color:var(--t2)">No live matches currently. Tournament starts 11 Jun 2026.</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;overflow-y:auto">
+      <div class="pn">
+        <div class="ph">
+          <span class="pt">News Terminal</span>
+          <div style="display:flex;gap:6px">
+            <button class="btn bo bsm" id="nf-all" onclick="filterNews('all',this)">All</button>
+            <button class="btn bo bsm" onclick="filterNews('INJURY',this)">Injuries</button>
+            <button class="btn bo bsm" onclick="filterNews('LINEUP',this)">Lineups</button>
+            <button class="btn bo bsm" onclick="filterNews('MARKET',this)">Markets</button>
+            <button class="btn bo bsm" onclick="filterNews('FORM',this)">Form</button>
+          </div>
+        </div>
+        <div id="news-terminal"></div>
+      </div>
+      <div class="pn"><div class="ph"><span class="pt">Market Movers</span></div>
+        <div class="pb" style="font-size:12px">
+          <div style="padding:5px 0;border-bottom:1px solid rgba(26,37,64,.4)"><div style="font-weight:600">Spain ↓</div><div style="color:var(--t2);font-size:10px">4.50 → 5.00 · Yamal doubt</div></div>
+          <div style="padding:5px 0;border-bottom:1px solid rgba(26,37,64,.4)"><div style="font-weight:600">Norway O2.5 ↓</div><div style="color:var(--t2);font-size:10px">1.95 → 1.90 · Sharp money</div></div>
+          <div style="padding:5px 0"><div style="font-weight:600">France Group Win ↑</div><div style="color:var(--t2);font-size:10px">1.50 → 1.55 · Slight drift</div></div>
+        </div>
+      </div>
+      <div class="pn"><div class="ph"><span class="pt">Tournament Odds</span></div><div id="tour-odds-news"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CONTROL (Risk + WhatsApp merged) ═══ -->
+<div id="tab-control" class="tab">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;height:100%;overflow-y:auto">
+    <!-- LEFT: Risk -->
+    <div style="display:flex;flex-direction:column;gap:8px;overflow-y:auto">
+      <div class="g2">
+        <div class="pn" style="border-top:2px solid var(--r)">
+          <div class="ph"><span class="pt">Daily Controls</span><span class="chip cg" id="d-ctrl">Within Limits</span></div>
+          <div class="pb">
+            <div class="srow" style="padding:6px 0"><div><div style="font-weight:600;font-size:12px">Max daily loss</div></div><span class="neg mono">−€50</span></div>
+            <div class="srow" style="padding:6px 0"><div><div style="font-weight:600;font-size:12px">Max daily exposure</div></div><span class="gold mono">€100</span></div>
+            <div class="srow" style="padding:6px 0;border:none"><div><div style="font-weight:600;font-size:12px">Max bets/day</div></div><span class="neu mono">5</span></div>
+            <div style="margin-top:6px;font-size:9px;color:var(--t3);margin-bottom:3px">DAILY LOSS USED</div>
+            <div class="rb"><div class="rf" id="d-loss-bar" style="width:0%;background:var(--g)"></div></div>
+          </div>
+        </div>
+        <div class="pn" style="border-top:2px solid var(--gold)">
+          <div class="ph"><span class="pt">Weekly Controls</span><span class="chip cg">Within Limits</span></div>
+          <div class="pb">
+            <div class="srow" style="padding:6px 0"><div><div style="font-weight:600;font-size:12px">Max weekly drawdown</div></div><span class="neg mono">−€75</span></div>
+            <div class="srow" style="padding:6px 0"><div><div style="font-weight:600;font-size:12px">Max futures allocation</div></div><span class="gold mono">€75</span></div>
+            <div class="srow" style="padding:6px 0;border:none"><div><div style="font-weight:600;font-size:12px">Correlated max</div></div><span class="neu mono">3/team</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="pn"><div class="ph"><span class="pt">CLV Tracker</span></div>
+          <div class="pb">
+            <div class="g2" style="margin-bottom:8px">
+              <div><div style="font-size:9px;color:var(--t3)">AVG CLV</div><div class="sv" id="r-clv" style="font-size:18px">—</div></div>
+              <div><div style="font-size:9px;color:var(--t3)">TRADES WITH CLV</div><div class="sv" id="r-clv-n" style="font-size:18px">0</div></div>
+            </div>
+            <div style="font-size:11px;color:var(--t2)">Enter closing odds in Trade Ledger. Target: <span class="pos">+2%</span></div>
+          </div>
+        </div>
+        <div class="pn"><div class="ph"><span class="pt">Audit Workflow</span></div>
+          <div class="pb" style="font-size:12px;color:var(--t2)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="width:18px;height:18px;background:var(--blue);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#000;flex-shrink:0">1</div><span>Betting Agent → trade thesis</span></div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="width:18px;height:18px;background:var(--pur);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#000;flex-shrink:0">2</div><span>Audit Agent → challenge</span></div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="width:18px;height:18px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#000;flex-shrink:0">3</div><span>Score assigned (1–10)</span></div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="width:18px;height:18px;background:var(--g);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#000;flex-shrink:0">4</div><span>Approved / Rejected</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><div style="width:18px;height:18px;background:var(--cy);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#000;flex-shrink:0">5</div><span>Published to dashboard</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="pn" style="border-top:2px solid var(--pur)">
+        <div class="ph"><span class="pt">Model v4 — Methodology</span><span class="chip" style="background:rgba(124,92,252,.15);color:var(--pur);font-size:9px">INSTITUTIONAL</span></div>
+        <div class="pb" style="font-size:11px;color:var(--t2);line-height:1.7">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+            ${[['Probability Blend','65% Dynamic ELO + 30% Market + 5% H2H'],['ELO Updates','+35 Win / −20 Loss (last 3 matches)'],['Lineup Factor','±160 ELO pts per rotation unit'],['Rest Days','+12 (≥5d) / −22 (≤2d)'],['KO xG Adj','<100 ELO gap: −0.22 · >200: +0.18'],['Shrinkage','s = min(0.10 + |Δp|×0.25, 0.35)'],['Stage Mult','R16: 0.88 · QF: 0.82 · SF/F: 0.78'],['Daily Cap','Top 4 bets/day by conf × ev score']].map(([k,v])=>`<div style="background:var(--bg3);border-radius:3px;padding:7px 9px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);margin-bottom:2px">${k}</div><div style="font-size:10px;font-weight:600;color:var(--t1)">${v}</div></div>`).join('')}
+          </div>
+          <div style="background:#0a0e1a;border:1px solid rgba(124,92,252,.2);border-radius:3px;padding:8px;font-family:var(--mono);font-size:10px">
+            <div style="color:var(--pur);margin-bottom:4px;font-weight:700">EV THRESHOLDS</div>
+            <div><span style="color:var(--t3)">1X2 standard:</span> <span style="color:var(--g)">EV ≥ 5.0%</span> &nbsp;·&nbsp; <span style="color:var(--t3)">O/U &lt;2.0:</span> <span style="color:var(--gold)">EV ≥ 7.0%</span></div>
+            <div><span style="color:var(--t3)">Underdog &gt;5x:</span> <span style="color:var(--r)">EV ≥ 10.0%</span> &nbsp;·&nbsp; <span style="color:var(--t3)">KO round:</span> <span style="color:var(--gold)">+2.0% on all</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="pn"><div class="ph"><span class="pt">Active Alerts</span></div><div id="risk-alerts"></div></div>
+    </div>
+    <!-- RIGHT: WhatsApp/Agent -->
+    <div style="display:flex;flex-direction:column;gap:8px;overflow-y:auto">
+      <div class="pn" id="wa-identity-panel">
+        <div class="ph"><span class="pt">Agent Identity</span><span class="pm" id="wa-identity-status">Not configured</span></div>
+        <div id="wa-identity-content" class="pb"></div>
+      </div>
+      <div class="pn">
+        <div class="ph"><span class="pt">Daily Messages</span><div style="display:flex;gap:6px"><button class="btn bg bsm" onclick="generateDailyMessage()">Generate Today</button><button class="btn bo bsm" onclick="generateCatchUp()">Catch-Up Mode</button></div></div>
+        <div id="wa-messages"></div>
+      </div>
+      <div class="pn">
+        <div class="ph"><span class="pt">Quick Share</span></div>
+        <div class="pb" style="display:flex;flex-direction:column;gap:6px">
+          <button class="btn bg" style="width:100%" onclick="openWA()">📲 Daily Betting Card</button>
+          <button class="btn bo" style="width:100%" onclick="generateNewsletterShare()">📰 Today's Newsletter</button>
+          <button class="btn bo" style="width:100%" onclick="generateRecapShare()">📊 Performance Recap</button>
+        </div>
+      </div>
+      <div class="pn">
+        <div class="ph"><span class="pt">Learning Log</span></div>
+        <div id="wa-learning-log" class="pb" style="font-size:11px;color:var(--t2)">
+          <div style="color:var(--t3)">Self-reflection entries appear here after each match settlement.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SETTINGS (hidden, accessible via URL hash) ═══ -->
+
+</div><!-- /main -->
+
+<!-- ══ BET BASKET DRAWER ══ -->
+<div id="basket-overlay" onclick="toggleBasket()"></div>
+<div id="basket-drawer">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--b);flex-shrink:0;background:var(--bg1)">
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t1)">Bet Basket</div>
+      <div id="bk-count-label" style="font-size:10px;color:var(--t3);margin-top:1px">0 selections</div>
+    </div>
+    <button class="cl" onclick="toggleBasket()" style="font-size:22px">×</button>
+  </div>
+  <div style="display:flex;border-bottom:1px solid var(--b);flex-shrink:0">
+    <div class="bk-tab active" id="bk-tab-simple" onclick="switchBasketTab('simple')">Simple</div>
+    <div class="bk-tab" id="bk-tab-combi" onclick="switchBasketTab('combi')">Combiné</div>
+  </div>
+  <div id="bk-items" style="flex:1;overflow-y:auto"></div>
+  <div style="padding:12px;border-top:1px solid var(--b);flex-shrink:0;background:var(--bg1)">
+    <div id="bk-summary" style="margin-bottom:8px"></div>
+    <button class="bk-place-btn" id="bk-place-btn" onclick="placeBasket()" disabled>Add selections first</button>
+    <div style="text-align:center;margin-top:6px;font-size:10px;color:var(--t3)">Place manually with your bookmaker, then click above to log</div>
+  </div>
+</div>
+
+<!-- ══ TRADE TICKET MODAL ══ -->
+<div class="ov" id="ticket-ov">
+  <div class="md" style="width:820px">
+    <div class="mh"><div><h3 id="tk-title">Trade Ticket</h3><div id="tk-sub" style="font-size:11px;color:var(--t2);margin-top:1px"></div></div>
+      <div style="display:flex;gap:6px"><button class="btn bg bsm" onclick="execFromTicket()">Place Bet</button><button class="cl" onclick="closeTicket()">×</button></div>
+    </div>
+    <div id="tk-body" class="mb"></div>
+  </div>
+</div>
+
+<!-- ══ EXECUTION MODAL ══ -->
+<div class="ov" id="exec-ov">
+  <div class="md" style="width:420px">
+    <div class="mh" style="border-bottom:1px solid var(--b)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px">Bet Slip</span>
+        <span class="chip cg" style="font-size:9px" id="bs-audit-chip"></span>
+      </div>
+      <button class="cl" onclick="closeExec()">×</button>
+    </div>
+    <div class="mb" style="padding:14px">
+      <!-- Selection card -->
+      <div class="bs-sel" id="bs-sel-card">
+        <div style="font-size:11px;color:var(--t3)" id="bs-match-label"></div>
+        <div style="font-size:16px;font-weight:700;color:var(--t1);margin:4px 0 2px" id="bs-sel-label"></div>
+        <div style="font-size:11px;color:var(--t2)" id="bs-market-label"></div>
+        <div class="bs-odds-row">
+          <div class="bs-stat"><div class="bs-stat-v gold" id="bs-odds-val">—</div><div class="bs-stat-l">Odds</div></div>
+          <div class="bs-stat"><div class="bs-stat-v" style="color:var(--cy)" id="bs-ev-val">—</div><div class="bs-stat-l">Exp. Value</div></div>
+          <div class="bs-stat"><div class="bs-stat-v" id="bs-audit-val">—</div><div class="bs-stat-l">Audit</div></div>
+        </div>
+      </div>
+      <!-- Stake -->
+      <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Stake</div>
+      <input class="bs-stake-input" id="bs-stake" type="number" min="1" max="500" step="1" placeholder="0" oninput="updateBetSlip()">
+      <div class="bs-quick" id="bs-quick-row">
+        <button onclick="setQuickStake(5)">€5</button>
+        <button onclick="setQuickStake(10)">€10</button>
+        <button onclick="setQuickStake(15)">€15</button>
+        <button onclick="setQuickStake(25)">€25</button>
+        <button onclick="setQuickStake('rec')" id="bs-rec-btn">Rec</button>
+      </div>
+      <!-- Actual odds override -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div class="fg" style="flex:1;margin:0">
+          <label>Actual Odds (your bookmaker)</label>
+          <input id="bs-actual-odds" type="number" step="0.01" style="width:100%;background:var(--bg3);border:1px solid var(--b2);border-radius:3px;padding:7px 9px;color:var(--t1);font-size:13px;font-family:var(--mono)" oninput="updateBetSlip()">
+        </div>
+        <div id="bs-odds-diff" style="font-size:10px;font-family:var(--mono);margin-top:14px;min-width:70px;text-align:right"></div>
+      </div>
+      <!-- Payout calculator -->
+      <div class="bs-calc">
+        <div class="bs-calc-row"><span style="color:var(--t2)">Potential Return</span><span class="mono pos" id="bs-return">€0.00</span></div>
+        <div class="bs-calc-row"><span style="color:var(--t2)">Profit</span><span class="mono pos" id="bs-profit">€0.00</span></div>
+        <div class="bs-calc-row"><span style="color:var(--t2)">Implied Probability</span><span class="mono" style="color:var(--cy)" id="bs-prob">—</span></div>
+      </div>
+      <!-- Balance before/after -->
+      <div class="bs-balance">
+        <div class="bs-bal-box">
+          <div class="bs-bal-label">Current Balance</div>
+          <div class="bs-bal-val" id="bs-bal-current">€0.00</div>
+        </div>
+        <div class="bs-bal-box" style="border-color:rgba(0,217,126,.2)">
+          <div class="bs-bal-label">After Bet</div>
+          <div class="bs-bal-val pos" id="bs-bal-after">€0.00</div>
+        </div>
+      </div>
+      <!-- CTA -->
+      <button class="bs-confirm" id="bs-confirm-btn" onclick="confirmExec()" disabled>
+        Place Bet — €0 to win €0
+      </button>
+      <div class="bs-sub">Place manually with your bookmaker, then click above to log</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOG BET MODAL ══ -->
+<div class="ov" id="bet-ov">
+  <div class="md" style="width:500px">
+    <div class="mh"><h3 id="bet-modal-title">Log Trade</h3><button class="cl" onclick="closeBetModal()">×</button></div>
+    <div class="mb">
+      <div class="fr"><div class="fg"><label>Match</label><input id="f-match" placeholder="France vs Iraq"></div><div class="fg"><label>Date</label><input id="f-date" type="date"></div></div>
+      <div class="fr">
+        <div class="fg"><label>Market</label>
+          <select id="f-market"><option>1X2 — Match Result</option><option>Double Chance</option><option>Draw No Bet</option><option>Over/Under Goals</option><option>Both Teams to Score</option><option>Asian Handicap</option><option>Anytime Goalscorer</option><option>First Goalscorer</option><option>Correct Score</option><option>Group Winner</option><option>Tournament Winner</option><option>Qualification</option><option>Accumulator</option></select>
+        </div>
+        <div class="fg"><label>Selection</label><input id="f-selection" placeholder="France Win"></div>
+      </div>
+      <div class="fr"><div class="fg"><label>Odds</label><input id="f-odds" type="number" step="0.01" placeholder="1.85"></div><div class="fg"><label>Stake (€)</label><input id="f-stake" type="number" step="1" placeholder="15"></div></div>
+      <div class="fr"><div class="fg"><label>Confidence (1–10)</label><input id="f-conf" type="number" step="0.1" min="1" max="10" placeholder="7.5"></div><div class="fg"><label>Risk</label><select id="f-risk"><option>Low</option><option>Moderate</option><option>High</option></select></div></div>
+      <div class="fg"><label>Thesis / Reasoning</label><textarea id="f-reason" rows="2" placeholder="Why this trade..."></textarea></div>
+      <div class="fr"><div class="fg"><label>Status</label><select id="f-status"><option value="pending">Pending</option><option value="won">Won</option><option value="lost">Lost</option><option value="void">Void</option></select></div><div class="fg"><label>Closing Odds (CLV)</label><input id="f-closing" type="number" step="0.01" placeholder="Optional"></div></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px"><button class="btn bo" onclick="closeBetModal()">Cancel</button><button class="btn bg" onclick="saveBet()">Save Trade</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SETTLE MODAL ══ -->
+<div class="ov" id="settle-ov">
+  <div class="md" style="width:380px">
+    <div class="mh"><h3>Settle Result</h3><button class="cl" onclick="document.getElementById('settle-ov').classList.remove('open')">×</button></div>
+    <div class="mb">
+      <div style="background:var(--bg2);border:1px solid var(--b);border-radius:4px;padding:12px;margin-bottom:16px">
+        <div style="font-weight:700;font-size:13px" id="settle-match">—</div>
+        <div style="display:flex;gap:12px;margin-top:6px;font-size:11px;color:var(--t2)">
+          <span id="settle-selection">—</span>
+          <span class="gold mono" id="settle-odds">—</span>
+          <span class="mono" id="settle-stake">—</span>
+          <span class="pos" id="settle-potential">—</span>
+        </div>
+      </div>
+      <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Outcome</div>
+      <div class="settle-outcome">
+        <div class="settle-btn settle-won" onclick="selectOutcome('won',this)">
+          <div style="font-size:20px;margin-bottom:4px">✓</div>Won
+        </div>
+        <div class="settle-btn settle-lost" onclick="selectOutcome('lost',this)">
+          <div style="font-size:20px;margin-bottom:4px">✗</div>Lost
+        </div>
+        <div class="settle-btn settle-void" onclick="selectOutcome('void',this)">
+          <div style="font-size:20px;margin-bottom:4px">○</div>Void
+        </div>
+      </div>
+      <div class="fg">
+        <label>Closing Odds (for CLV tracking, optional)</label>
+        <input id="settle-closing" type="number" step="0.01" placeholder="e.g. 1.15">
+      </div>
+      <div id="settle-pnl-preview" style="display:none;background:var(--bg2);border-radius:4px;padding:10px 12px;margin-bottom:12px;font-size:12px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn bo" onclick="document.getElementById('settle-ov').classList.remove('open')">Cancel</button>
+        <button class="btn bg" id="settle-confirm-btn" onclick="confirmSettle()" disabled>Settle Bet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ AGENT NAMING MODAL ══ -->
+<div class="ov" id="name-ov">
+  <div class="md" style="width:480px">
+    <div class="mh"><h3>Choose Your Agent Name</h3></div>
+    <div class="mb">
+      <div style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.7">I need a name to operate under for the entire World Cup. I'll sign every WhatsApp message with it. Pick one — I'll adapt my personality to match.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px" id="name-options">
+        <div class="name-opt" onclick="selectAgentName('Atlas')" style="background:var(--bg3);border:1px solid var(--b2);border-radius:4px;padding:12px;cursor:pointer;transition:border-color .2s" data-name="Atlas">
+          <div style="font-size:16px;font-weight:700;margin-bottom:4px">Atlas</div>
+          <div style="font-size:11px;color:var(--t2)">Structured, calm, analytical. Like a trading desk CRO.</div>
+        </div>
+        <div class="name-opt" onclick="selectAgentName('Scout')" style="background:var(--bg3);border:1px solid var(--b2);border-radius:4px;padding:12px;cursor:pointer;transition:border-color .2s" data-name="Scout">
+          <div style="font-size:16px;font-weight:700;margin-bottom:4px">Scout</div>
+          <div style="font-size:11px;color:var(--t2)">Football-reading, observational, intuitive.</div>
+        </div>
+        <div class="name-opt" onclick="selectAgentName('Kai')" style="background:var(--bg3);border:1px solid var(--b2);border-radius:4px;padding:12px;cursor:pointer;transition:border-color .2s" data-name="Kai">
+          <div style="font-size:16px;font-weight:700;margin-bottom:4px">Kai</div>
+          <div style="font-size:11px;color:var(--t2)">Sharp, modern, slightly aggressive trading edge.</div>
+        </div>
+        <div class="name-opt" onclick="selectAgentName('Finn')" style="background:var(--bg3);border:1px solid var(--b2);border-radius:4px;padding:12px;cursor:pointer;transition:border-color .2s" data-name="Finn">
+          <div style="font-size:16px;font-weight:700;margin-bottom:4px">Finn</div>
+          <div style="font-size:11px;color:var(--t2)">Balanced, friendly, conversational.</div>
+        </div>
+        <div class="name-opt" onclick="selectAgentName('Nova')" style="background:var(--bg3);border:1px solid var(--b2);border-radius:4px;padding:12px;cursor:pointer;transition:border-color .2s" data-name="Nova">
+          <div style="font-size:16px;font-weight:700;margin-bottom:4px">Nova</div>
+          <div style="font-size:11px;color:var(--t2)">Precise, data-driven, quietly confident.</div>
+        </div>
+      </div>
+      <div id="name-confirm" style="display:none;text-align:center">
+        <div style="font-size:14px;margin-bottom:12px">You selected: <strong id="name-chosen" style="color:var(--g)"></strong></div>
+        <button class="btn bg" onclick="confirmAgentName()">Confirm — Lock Name for WC2026</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ WHATSAPP MODAL ══ -->
+<div class="ov" id="wa-ov">
+  <div class="md" style="width:520px">
+    <div class="mh"><h3>📲 Daily Brief — WhatsApp Ready</h3><button class="cl" onclick="document.getElementById('wa-ov').classList.remove('open')">×</button></div>
+    <div class="mb">
+      <div class="wa-output" id="wa-text"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn bo" onclick="document.getElementById('wa-ov').classList.remove('open')">Close</button>
+        <button class="btn bg" onclick="copyWA()">📋 Copy to Clipboard</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════ DATA ═══════════════════════════════════
+let RECS=[
+  {id:'r1',match:'France vs Iraq',date:'2026-06-17',market:'1X2 — Match Result',sel:'France Win',odds:1.20,fairOdds:1.12,modelP:89,mktP:83.3,edge:5.7,ev:7.4,conf:8.8,risk:'Low',stake:25,tier:1,
+   uncertainty:0.04,clv_outlook:'Neutral',stage_mult:1.0,kelly_pct:6.2,lineup_flag:'Full Squad',
+   rationale:'France #1 ELO globally (2053). Iraq first WC since 1986 — no players in top-5 European leagues. Mbappé fit confirmed. Dembélé: Ballon d\'Or 2025, back-to-back UCL champion. Opta 95.3% France to advance.',
+   factors:['Mbappé fit ✓','Dembélé Ballon d\'Or + UCL','Iraq no WC 40 years','ELO 2053 — #1 world'],risks:['Rotation risk if France lead','Odds too short for Kelly — min profit threshold tight'],
+   betting:{score:8.7},audit:{score:9.2,status:'Approved',warnings:[],notes:'Strong ELO edge. Odds at 1.20 are below min Kelly threshold — low profit floor. Monitor team news.'}},
+  {id:'r2',match:'France vs Iraq',date:'2026-06-17',market:'Total Goals',sel:'Over 3.5 Goals',odds:1.75,fairOdds:1.58,modelP:64,mktP:57.1,edge:6.9,ev:12.0,conf:7.5,risk:'Moderate',stake:15,tier:1,
+   uncertainty:0.09,clv_outlook:'Positive',stage_mult:1.0,kelly_pct:18.4,lineup_flag:'Full Squad',
+   rationale:'France avg 2.4 goals/match in qualifiers. Iraq conceded 2+ in 7/10 recent matches. Asymmetric KO adj: group stage, ELO gap 530 → +0.18 xG to base. France expected 3.1 xG vs Iraq.',
+   factors:['France 2.4 goals/match avg','Iraq conceded 2+ in 7/10','xG model: 3.1 expected vs Iraq','ELO gap 530 — largest mismatch in Group I'],risks:['Rotation if 3-0 at 65min','Iraq compact block'],
+   betting:{score:8.2},audit:{score:8.1,status:'Approved with Warnings',warnings:['Rotation risk at big lead — monitor lineup'],notes:'EV +12% solid. CLV positive — sharp money backing over. Group stage, no stage penalty.'}},
+  {id:'r3',match:'Brazil vs Morocco',date:'2026-06-13',market:'1X2 — Match Result',sel:'Brazil Win',odds:1.65,fairOdds:1.55,modelP:66,mktP:60.6,edge:5.4,ev:8.9,conf:7.2,risk:'Moderate',stake:15,tier:2,
+   uncertainty:0.09,clv_outlook:'Neutral',stage_mult:1.0,kelly_pct:9.1,lineup_flag:'Full Squad',
+   rationale:'Brazil 4th favourites (7.50 WC). Vinicius Jr + Rodrygo (Real Madrid) elite 2025-26 form. Morocco loses North African home support advantage. Dynamic shrinkage: model 66% vs market 60.6% — 5.4pp gap, low uncertainty.',
+   factors:['Brazil 4th fav at 7.50','Vinicius + Rodrygo UCL form','Morocco away disadvantage','Low uncertainty (0.09)'],risks:['Morocco 4-5-1 block','Hakimi + Mazraoui in form'],
+   betting:{score:7.8},audit:{score:7.4,status:'Approved with Warnings',warnings:['Morocco defensive solidity underrated'],notes:'Valid EV. Uncertainty low — model and market broadly aligned. 3% stake appropriate.'}},
+  {id:'r4',match:'Senegal vs Norway',date:'2026-06-17',market:'Total Goals',sel:'Over 2.5 Goals',odds:1.90,fairOdds:1.72,modelP:60,mktP:52.6,edge:7.4,ev:14.1,conf:7.0,risk:'Moderate',stake:10,tier:1,
+   uncertainty:0.11,clv_outlook:'Positive',stage_mult:1.0,kelly_pct:22.1,lineup_flag:'Full Squad',
+   rationale:'Norway avg 4.6 goals/match in WC qualifiers — European record. Haaland 16 goals in 8 qualifiers. CLV positive: sharp money confirming over direction. EV +14.1% — highest in portfolio on staked basis.',
+   factors:['Norway 4.6 goals/match avg — record','Haaland 16 goals in 8 qualifiers','Mané available (missed 2022)','CLV positive — sharp money aligned'],risks:['Senegal may defend vs Haaland'],
+   betting:{score:8.5},audit:{score:8.6,status:'Approved',warnings:[],notes:'Best EV/risk ratio. CLV outlook positive. Full approval.'}},
+  {id:'r5',match:'France — Group I Winner',date:'2026-06-26',market:'Group Winner',sel:'France 1st Place',odds:1.55,fairOdds:1.47,modelP:68,mktP:64.5,edge:3.5,ev:5.4,conf:8.0,risk:'Low',stake:20,tier:2,
+   uncertainty:0.05,clv_outlook:'Neutral',stage_mult:1.0,kelly_pct:5.8,lineup_flag:'Full Squad',
+   rationale:'Opta 68% P(1st) across 10k simulations. Group I strongest ELO (avg 1870). Futures anchor: low EV but very stable. Uncertainty 0.05 — model and market tightly aligned.',
+   factors:['Opta 68% probability','Group I strongest by ELO','Futures anchor — holds value long-term'],risks:['Norway upset if France rotate MD3'],
+   betting:{score:7.9},audit:{score:7.8,status:'Approved',warnings:[],notes:'Low EV but low uncertainty. Good portfolio diversifier — futures position.'}},
+  {id:'r6',match:'Norway Qualification',date:'2026-06-26',market:'Qualification',sel:'Norway to Qualify',odds:1.40,fairOdds:1.22,modelP:82,mktP:71.4,edge:10.6,ev:14.9,conf:7.8,risk:'Low',stake:15,tier:1,
+   uncertainty:0.08,clv_outlook:'Positive',stage_mult:1.0,kelly_pct:28.3,lineup_flag:'Full Squad',
+   rationale:'Opta 82.3% Norway to qualify. Market implies 71.4% — 10.6pp mispricing. 48-team WC format: 3rd place viable. Haaland as group-stage weapon — Senegal and Iraq both concede to pace.',
+   factors:['82.3% Opta probability','10.6% edge vs market','48-team format — 3rd viable','Haaland pace dominant vs weaker defences'],risks:['Group I very difficult'],
+   betting:{score:9.0},audit:{score:9.0,status:'Approved',warnings:[],notes:'Best risk-adjusted EV. CLV positive. Highest conviction. Full approval.'}}
+];
+
+let ACCS=[
+  {id:'a1',type:'Conservative',color:'var(--g)',legs:['r3','r5'],
+   combinedOdds:2.55,modelProb:44,stake:15,ev:'+9.6%',
+   mixed_market:false,correlation_score:0.06,
+   correlation:'Low — different groups, no shared players or outcomes',
+   audit:{score:8.5,status:'Approved',notes:'Brazil Win (1X2) + France Group I Winner (Tournament). Independent events, different groups. No O/U legs — correlation-clean by v4 standard. Conservative target achieved.'}},
+  {id:'a2',type:'Balanced',color:'var(--gold)',legs:['r1','r4','r6'],
+   combinedOdds:3.19,modelProb:42,stake:10,ev:'+14.8%',
+   mixed_market:true,correlation_score:0.10,
+   correlation:'Low — 1X2 + O/U + Tournament. Mixed-market validated.',
+   audit:{score:8.1,status:'Approved',notes:'France Win (1X2) + Senegal/Norway O2.5 (O/U) + Norway Qualify (Tournament). Mixed-market combo passes v4 requirement (≥1 non-O/U leg). France Group I connection with Norway is positive correlation — partially offsets. Acceptable.'}},
+  {id:'a3',type:'High Upside',color:'var(--pur)',legs:['r1','r3','r4','r6'],
+   combinedOdds:5.26,modelProb:31,stake:5,ev:'+18.2%',
+   mixed_market:true,correlation_score:0.19,
+   correlation:'Moderate — 3 of 4 legs involve Group I teams. Mixed-market validated.',
+   audit:{score:6.5,status:'Approved with Warnings',notes:'France Win + Brazil Win (1X2) + Sen/Nor O2.5 (O/U) + Norway Qualify (Tournament). Mixed-market passes v4. Group I overexposure: France/Norway legs share context. HHI acceptable at 4-leg spread. Small stake (€5) appropriate for 19% correlation score.'}}
+];
+
+const MILESTONES=[
+  {label:'Stage 1',from:500,to:1000,desc:'€500 → €1,000'},
+  {label:'Stage 2',from:1000,to:5000,desc:'€1,000 → €5,000'},
+  {label:'Stage 3',from:5000,to:10000,desc:'€5,000 → €10,000'},
+  {label:'Stage 4',from:10000,to:25000,desc:'€10,000 → €25,000'},
+];
+
+// ko = kickoff UTC time (HH:MM). iso = YYYY-MM-DDTHH:MM:00Z for countdown math.
+// Betting window closes AT kickoff — model tags match as locked once Date.now() >= koMs.
+let FIXTURES=[
+  {date:'11 Jun',ko:'21:00',iso:'2026-06-11T21:00:00Z',home:'Mexico',away:'S. Africa',group:'A',venue:'Azteca',h:1.85,d:3.40,a:4.00},
+  {date:'12 Jun',ko:'18:00',iso:'2026-06-12T18:00:00Z',home:'Canada',away:'Bosnia',group:'B',venue:'BMO',h:2.10,d:3.20,a:3.60},
+  {date:'12 Jun',ko:'21:00',iso:'2026-06-12T21:00:00Z',home:'USA',away:'Paraguay',group:'D',venue:'MetLife',h:1.75,d:3.50,a:4.50},
+  {date:'13 Jun',ko:'21:00',iso:'2026-06-13T21:00:00Z',home:'Brazil',away:'Morocco',group:'C',venue:'Gillette',h:1.65,d:3.60,a:5.00},
+  {date:'14 Jun',ko:'18:00',iso:'2026-06-14T18:00:00Z',home:'Germany',away:'Curaçao',group:'E',venue:'Lincoln',h:1.12,d:8.00,a:25.00},
+  {date:'15 Jun',ko:'21:00',iso:'2026-06-15T21:00:00Z',home:'Spain',away:'Cape Verde',group:'H',venue:'Levis',h:1.20,d:6.50,a:16.00},
+  {date:'16 Jun',ko:'21:00',iso:'2026-06-16T21:00:00Z',home:'Netherlands',away:'Ecuador',group:'D',venue:'ATT',h:1.55,d:3.60,a:5.50},
+  {date:'17 Jun',ko:'18:00',iso:'2026-06-17T18:00:00Z',home:'France',away:'Iraq',group:'I',venue:'MetLife',h:1.20,d:7.00,a:18.00},
+  {date:'17 Jun',ko:'21:00',iso:'2026-06-17T21:00:00Z',home:'Senegal',away:'Norway',group:'I',venue:'Arrowhead',h:2.40,d:3.10,a:3.00},
+  {date:'18 Jun',ko:'21:00',iso:'2026-06-18T21:00:00Z',home:'Argentina',away:'Algeria',group:'J',venue:'HardRock',h:1.45,d:4.00,a:7.00},
+  {date:'18 Jun',ko:'18:00',iso:'2026-06-18T18:00:00Z',home:'Portugal',away:'Poland',group:'B',venue:'Empower',h:1.60,d:3.50,a:5.50},
+  {date:'19 Jun',ko:'21:00',iso:'2026-06-19T21:00:00Z',home:'England',away:'Cameroon',group:'G',venue:'Lincoln',h:1.30,d:5.50,a:10.00},
+  {date:'22 Jun',ko:'21:00',iso:'2026-06-22T21:00:00Z',home:'France',away:'Senegal',group:'I',venue:'Arrowhead',h:1.70,d:3.50,a:5.00},
+  {date:'23 Jun',ko:'21:00',iso:'2026-06-23T21:00:00Z',home:'Brazil',away:'USA',group:'C',venue:'ATT',h:1.55,d:3.80,a:5.50},
+  {date:'26 Jun',ko:'22:00',iso:'2026-06-26T22:00:00Z',home:'France',away:'Norway',group:'I',venue:'Azteca',h:1.80,d:3.40,a:4.20},
+  {date:'27 Jun',ko:'21:00',iso:'2026-06-27T21:00:00Z',home:'Spain',away:'Germany',group:'H',venue:'MetLife',h:2.20,d:3.20,a:3.40},
+];
+
+const TOUR_ODDS=[
+  {t:'Spain',f:'🇪🇸',o:'4.50',p:'22.2%'},{t:'France',f:'🇫🇷',o:'5.00',p:'20.0%'},
+  {t:'England',f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',o:'6.50',p:'15.4%'},{t:'Brazil',f:'🇧🇷',o:'7.50',p:'13.3%'},
+  {t:'Argentina',f:'🇦🇷',o:'9.00',p:'11.1%'},{t:'Germany',f:'🇩🇪',o:'10.00',p:'10.0%'},
+  {t:'Portugal',f:'🇵🇹',o:'12.00',p:'8.3%'},{t:'Norway',f:'🇳🇴',o:'28.00',p:'3.6%'},
+];
+
+let NEWS_DATA=[
+  {cat:'INJURY',impact:'high',head:'Lamine Yamal (Spain) — hamstring concern. Tournament fitness uncertain.',meta:'2h ago',cls:'cr'},
+  {cat:'CONFIRMED',impact:'high',head:'Mbappé declared fit for France opener vs Iraq on June 17.',meta:'4h ago',cls:'cg'},
+  {cat:'MARKET',impact:'med',head:'Spain odds drift 4.50 → 5.00 following Yamal concern. Sharp money moving.',meta:'3h ago',cls:'cgold'},
+  {cat:'FORM',impact:'med',head:'Norway confirm full squad available. Haaland: "We are ready."',meta:'5h ago',cls:'cb'},
+  {cat:'FORM',impact:'med',head:'Dembélé wins 2nd UCL title with PSG (beat Arsenal, May 30). Ballon d\'Or holder in form.',meta:'5d ago',cls:'cg'},
+  {cat:'MARKET',impact:'med',head:'Senegal vs Norway O2.5 moving: 1.95 → 1.90. Sharp betting on Haaland prop.',meta:'6h ago',cls:'cgold'},
+  {cat:'LINEUP',impact:'med',head:'France preliminary squad announced: Mbappé, Dembélé, Barcola, Olise, Thuram all included.',meta:'2d ago',cls:'cb'},
+  {cat:'STATS',impact:'med',head:'Haaland: 16 goals in 8 WC qualifiers. Norway avg 4.6 goals/match — European record.',meta:'1d ago',cls:'cg'},
+  {cat:'DRAW',impact:'low',head:'Group I confirmed: France, Senegal, Norway, Iraq — highest avg ELO (1870).',meta:'6m ago',cls:'cdim'},
+  {cat:'FORMAT',impact:'low',head:'WC2026: 48 teams, 12 groups, 104 matches. June 11 – July 19, 2026.',meta:'1w ago',cls:'cdim'},
+];
+
+let ALERTS=[
+  {level:'hi',tag:'VALUE ALERT',head:'Norway Qualification — 10.6% edge detected',sub:'Model: 82.3% · Market: 71.4% · EV: +14.9% · Audit: 9.0/10'},
+  {level:'hi',tag:'INJURY ALERT',head:'Yamal (Spain) — hamstring doubt',sub:'Spain odds drifting. Monitor for WC fitness update.'},
+  {level:'md',tag:'MARKET MOVE',head:'Senegal/Norway O2.5 line moving: 1.95→1.90',sub:'Sharp money aligns with our model recommendation.'},
+  {level:'md',tag:'ACTION',head:'France vs Iraq (Jun 17) — 6 pending bets to place',sub:'Total exposure: €100. Deadline: June 17 kickoff.'},
+  {level:'lo',tag:'INFO',head:'Brazil training camp underway in Miami. No injuries reported.',sub:''},
+];
+
+const TICKER_TEXT=[
+  'WC2026 TRADING TERMINAL','&nbsp;·&nbsp;<span style="color:var(--gold)">FRANCE 5.00 · SPAIN 4.50 · ENGLAND 6.50 · BRAZIL 7.50</span>',
+  '&nbsp;·&nbsp;<span style="color:var(--r)">⚠ YAMAL (ESP) HAMSTRING DOUBT</span>',
+  '&nbsp;·&nbsp;<span style="color:var(--g)">✓ MBAPPÉ CONFIRMED FIT</span>',
+  '&nbsp;·&nbsp; NORWAY QUALIFICATION · EV +14.9% · AUDIT 9.0/10 ',
+  '&nbsp;·&nbsp;<span style="color:var(--gold)">TOURNAMENT STARTS 11 JUN 2026 · 7 DAYS</span>',
+  '&nbsp;·&nbsp; HAALAND 16 GOALS IN 8 WC QUALIFIERS · EUROPEAN RECORD ',
+  '&nbsp;·&nbsp;<span style="color:var(--g)">SENEGAL/NORWAY O2.5 · EV +14.1% · AUDIT 8.6/10</span>',
+];
+
+// ═══════════════════════════════════ API ═══════════════════════════════════
+const API_BASE = "https://wc2026-backend-production-dd79.up.railway.app";
+
+async function apiFetch(path, opts={}) {
+  const res = await fetch(API_BASE + path, {headers:{'Content-Type':'application/json'}, ...opts});
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
+}
+
+// ═══════════════════════════════════ STATE ═══════════════════════════════════
+let STATE={bets:[],bankroll:{starting:500}};
+let editId=null,execRec=null,ticketRec=null;
+let chartEq,chartPerf,chartExpChart;
+
+function loadState(){try{const s=localStorage.getItem('wc2026pro');if(s)STATE=JSON.parse(s);}catch(e){}}
+function saveState(){try{localStorage.setItem('wc2026pro',JSON.stringify(STATE));}catch(e){}}
+
+// ═══════════════════════════════════ API NORMALIZERS ═══════════════════════════════════
+function normalizeBet(b){
+  return {
+    id:b.id, match:b.match, date:b.date, market:b.market, selection:b.selection,
+    recOdds:b.rec_odds, odds:b.actual_odds, recStake:b.rec_stake, stake:b.actual_stake,
+    confidence:b.confidence, risk:b.risk, reason:b.reasoning, status:b.status,
+    closingOdds:b.closing_odds, isAccumulator:b.is_accumulator, recId:b.rec_id,
+    createdAt:b.created_at
+  };
+}
+
+function normalizeRec(r){
+  return {
+    id:r.id, match:r.match, date:r.date, market:r.market, sel:r.selection,
+    odds:r.odds, fairOdds:r.fair_odds,
+    modelP:Math.round((r.model_probability||0)*100),
+    mktP:Math.round((r.market_implied_probability||0)*100),
+    edge:r.edge, ev:r.ev, conf:r.confidence, risk:r.risk,
+    stake:r.recommended_stake, tier:r.tier||1,
+    rationale:r.rationale||'', factors:r.factors||[], risks:r.risks||[],
+    betting:{score:r.betting_score||0},
+    audit:{score:r.audit_score, status:r.audit_status, notes:r.audit_notes, warnings:r.audit_warnings||[]}
+  };
+}
+
+function normalizeMatch(m){
+  const d=new Date(m.date);
+  const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+  const iso=m.utc_date||m.iso||m.date;
+  const ko=m.ko||(iso?new Date(iso).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false}):'');
+  return {date:d.getDate()+' '+mo, ko, iso, home:m.home_team||m.home, away:m.away_team||m.away, group:m.group||'', venue:m.venue||'', h:null, d:null, a:null, _raw:m};
+}
+
+function normalizeNewsItem(n){
+  const cls=n.impact==='high'?'cr':n.impact==='low'?'cdim':'cgold';
+  return {cat:n.category||n.cat||'NEWS', impact:n.impact||'med', head:n.headline||n.head||'', meta:n.published_at||n.meta||'', cls};
+}
+
+// ═══════════════════════════════════ API LOADERS ═══════════════════════════════════
+async function fetchPortfolio(){
+  if(!API_BASE) return;
+  try{
+    const p=await apiFetch('/api/portfolio');
+    STATE.bankroll.starting=p.starting_bankroll;
+    // Update header directly from API values
+    const sgn=p.pnl>=0?'+':'';
+    document.getElementById('h-bk').textContent='€'+p.bankroll.toFixed(2);
+    const dp=document.getElementById('h-dp');dp.textContent=sgn+'€'+Math.abs(p.pnl).toFixed(2);dp.style.color=p.pnl>=0?'var(--g)':'var(--r)';
+    const ri=document.getElementById('h-roi');ri.textContent=sgn+p.roi.toFixed(2)+'%';ri.style.color=p.roi>=0?'var(--g)':'var(--r)';
+    document.getElementById('h-exp').textContent='€'+p.open_stake.toFixed(0)+' / €'+(p.starting_bankroll*.2).toFixed(0);
+    document.getElementById('h-open').textContent=p.open_count;
+    document.getElementById('h-wr').textContent=p.win_rate!==null?p.win_rate.toFixed(0)+'%':'—';
+    const ms=getCurrentMilestone(p.bankroll);if(ms)document.getElementById('h-goal').textContent=ms.desc;
+    ['d-bk','p-bk'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='€'+p.bankroll.toFixed(2);});
+    ['d-pnl','p-pnl'].forEach(id=>{const e=document.getElementById(id);if(e){e.textContent=sgn+'€'+Math.abs(p.pnl).toFixed(2);e.className='sv '+(p.pnl>=0?'pos':'neg');}});
+    ['d-roi','p-roi'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='ROI '+sgn+p.roi.toFixed(2)+'%';});
+    ['d-wr','p-wr'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=p.win_rate!==null?p.win_rate.toFixed(0)+'%':'—';});
+    ['d-settled','p-set'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=p.settled_count+' settled';});
+    const dd=document.getElementById('p-dd');if(dd)dd.textContent=p.pnl<0?Math.abs(p.roi).toFixed(1)+'%':'0.0%';
+    const ds=document.getElementById('d-streak');if(ds)ds.textContent=p.streak;
+    const dop=document.getElementById('d-open');if(dop)dop.textContent=p.open_count;
+    const dep=document.getElementById('d-exp');if(dep)dep.textContent='€'+p.open_stake.toFixed(0)+' exposed';
+    const tclv=document.getElementById('tr-clv');if(tclv)tclv.textContent=p.avg_clv!==null?(p.avg_clv>=0?'+':'')+p.avg_clv.toFixed(1)+'%':'—';
+    const tacc=document.getElementById('tr-acc');if(tacc)tacc.textContent=p.win_rate!==null?p.win_rate.toFixed(0)+'%':'—';
+    const trp=document.getElementById('tr-rpnl');if(trp)trp.textContent=(p.pnl>=0?'+€':'−€')+Math.abs(p.pnl).toFixed(2);
+    const rclv=document.getElementById('r-clv');if(rclv)rclv.textContent=p.avg_clv!==null?(p.avg_clv>=0?'+':'')+p.avg_clv.toFixed(1)+'%':'—';
+    const rcn=document.getElementById('r-clv-n');if(rcn)rcn.textContent=p.total_bets-p.settled_count;
+    const em=document.getElementById('eq-meta');if(em)em.textContent='€'+p.bankroll.toFixed(2)+' ('+sgn+p.roi.toFixed(1)+'%)';
+    document.getElementById('tr-n').textContent=p.total_bets;
+  }catch(e){console.warn('Portfolio API unavailable, using local state');}
+}
+
+async function fetchBets(){
+  if(!API_BASE) return;
+  try{
+    const bets=await apiFetch('/api/bets');
+    STATE.bets=bets.map(normalizeBet);
+    saveState();
+    renderPositions();renderLedger();renderActionCenter();initCharts();
+  }catch(e){console.warn('Bets API unavailable, using local state');}
+}
+
+async function fetchRecommendations(){
+  if(!API_BASE) return;
+  try{
+    const recs=await apiFetch('/api/recommendations');
+    if(recs.length>0){RECS=recs.map(normalizeRec);renderFeeds();renderActionCenter();renderDailyCard();}
+  }catch(e){console.warn('Recommendations API unavailable, using hardcoded data');}
+}
+
+async function fetchNews(){
+  if(!API_BASE) return;
+  try{
+    const news=await apiFetch('/api/news');
+    if(news.length>0){NEWS_DATA=news.map(normalizeNewsItem);renderNews();}
+  }catch(e){console.warn('News API unavailable, using hardcoded data');}
+}
+
+async function fetchMatches(){
+  if(!API_BASE) return;
+  try{
+    const matches=await apiFetch('/api/matches');
+    if(matches.length>0){FIXTURES=matches.map(normalizeMatch);await fetchOdds();}
+  }catch(e){console.warn('Matches API unavailable, using hardcoded data');}
+}
+
+async function fetchOdds(){
+  if(!API_BASE) return;
+  try{
+    const odds=await apiFetch('/api/odds');
+    if(!odds||!odds.length) return;
+    // Group by match key
+    const byMatch={};
+    odds.forEach(o=>{
+      const key=(o.home+'|'+o.away).toLowerCase();
+      if(!byMatch[key]) byMatch[key]=[];
+      byMatch[key].push(o);
+    });
+    // Merge h/d/a into FIXTURES
+    let updated=false;
+    FIXTURES.forEach(f=>{
+      const key=(f.home+'|'+f.away).toLowerCase();
+      const entries=byMatch[key];
+      if(!entries) return;
+      entries.forEach(o=>{
+        if(o.market==='h2h'){
+          const sel=(o.selection||'').toLowerCase();
+          if(sel===f.home.toLowerCase()||sel==='home'||sel==='1') f.h=parseFloat(o.odds)||f.h;
+          else if(sel==='draw'||sel==='x') f.d=parseFloat(o.odds)||f.d;
+          else if(sel===f.away.toLowerCase()||sel==='away'||sel==='2') f.a=parseFloat(o.odds)||f.a;
+        }
+      });
+      updated=true;
+    });
+    if(updated) renderFixtures();
+  }catch(e){console.warn('Odds API unavailable, using hardcoded odds');}
+}
+
+async function initAPI(){
+  if(!API_BASE){console.info('API_BASE not set — running in offline/demo mode');return;}
+  try{await apiFetch('/api/health');console.info('✅ Railway API connected');}catch(e){console.warn('⚠️ Railway API offline — running in demo mode');return;}
+  // Load all data in parallel
+  await Promise.all([fetchPortfolio(),fetchBets(),fetchRecommendations(),fetchNews(),fetchMatches(),fetchOdds()]);
+  // WebSocket with exponential backoff reconnect
+  let wsRetry=0,wsTimer=null,wsInstance=null;
+  function connectWS(){
+    if(wsTimer){clearTimeout(wsTimer);wsTimer=null;}
+    try{
+      const wsUrl=API_BASE.replace(/^https/,'wss').replace(/^http/,'ws')+'/ws';
+      const ws=new WebSocket(wsUrl);
+      wsInstance=ws;
+      ws.onopen=()=>{wsRetry=0;updateWSIndicator(true);console.info('🔌 WebSocket connected');};
+      ws.onmessage=e=>{
+        try{const msg=JSON.parse(e.data);
+          if(msg.type==='bet_created'||msg.type==='bet_updated'||msg.type==='bet_settled'){fetchBets();fetchPortfolio();}
+          else if(msg.type==='recommendations_updated'){fetchRecommendations();}
+          else if(msg.type==='news_updated'){fetchNews();}
+          else if(msg.type==='matches_updated'){fetchMatches();}
+          else if(msg.type==='odds_updated'){fetchOdds();}
+          else if(msg.type==='learning_log'){
+            const el=document.getElementById('wa-learning-log');
+            if(el&&msg.entry){const d=document.createElement('div');d.style.cssText='padding:6px 0;border-bottom:1px solid rgba(26,37,64,.3);font-size:11px';d.innerHTML=`<div style="color:var(--gold);font-family:var(--mono);margin-bottom:2px">${msg.entry.date}</div><div>${msg.entry.reflection}</div>`;el.prepend(d);}
+          }
+        }catch(_){}
+      };
+      ws.onclose=e=>{
+        updateWSIndicator(false);
+        if(e.code!==1000){// not intentional close
+          wsRetry++;const delay=Math.min(30000,1000*Math.pow(2,wsRetry-1));
+          console.warn(`WebSocket closed. Reconnecting in ${delay/1000}s (attempt ${wsRetry})`);
+          wsTimer=setTimeout(connectWS,delay);
+        }
+      };
+      ws.onerror=()=>{ws.close();};
+    }catch(e){console.warn('WebSocket unavailable');updateWSIndicator(false);}
+  }
+  connectWS();
+  // Auto-refresh every 60s as fallback
+  setInterval(()=>{fetchPortfolio();fetchBets();},60000);
+  // Reconnect when tab regains focus (handles laptop sleep)
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden&&(!wsInstance||wsInstance.readyState>1)){connectWS();}
+  });
+}
+
+function calcStats(){
+  const b=STATE.bets,start=STATE.bankroll.starting||500;
+  const peak=STATE.bankroll.peak||start;
+  // Void bets: stake returned (treated as 0 pnl, 0 openStake)
+  const settled=b.filter(x=>x.status==='won'||x.status==='lost');
+  const void_bets=b.filter(x=>x.status==='void');
+  const won=settled.filter(x=>x.status==='won');
+  const pnl=b.reduce((s,x)=>{
+    if(x.status==='won')return s+(x.stake*x.odds-x.stake);
+    if(x.status==='lost')return s-x.stake;
+    return s; // pending & void: no pnl yet
+  },0);
+  const open=b.filter(x=>x.status==='pending');
+  const openStake=open.reduce((s,x)=>s+(parseFloat(x.stake)||0),0);
+  // Bankroll = start + realised pnl - money currently at risk
+  const bankroll=Math.max(0,start+pnl-openStake);
+  const roi=(pnl/start)*100;
+  const wr=settled.length?(won.length/settled.length)*100:null;
+  const clvBets=b.filter(x=>x.closingOdds&&x.odds);
+  const avgCLV=clvBets.length?clvBets.reduce((s,x)=>s+((x.odds/x.closingOdds-1)*100),0)/clvBets.length:null;
+  let streak=0;const sr=[...settled].reverse();for(const x of sr){if(x.status==='won')streak++;else break;}
+  // Drawdown from peak
+  const realBankroll=start+pnl; // not deducting open stake for DD calc
+  const dd=peak>0?Math.max(0,(peak-realBankroll)/peak*100):0;
+  const ddMult=dd<5?1.00:dd<10?0.75:dd<20?0.50:0.25;
+  const todayStr=new Date().toISOString().split('T')[0];
+  const todayBets=b.filter(x=>(x.createdAt||'').startsWith(todayStr));
+  const dailyPnl=todayBets.reduce((s,x)=>{if(x.status==='won')return s+(x.stake*x.odds-x.stake);if(x.status==='lost')return s-x.stake;return s;},0);
+  const dailyExposure=b.filter(x=>x.status==='pending'&&(x.createdAt||'').startsWith(todayStr)).reduce((s,x)=>s+x.stake,0);
+  return{b,settled,won,pnl,bankroll,roi,wr,open,openStake,clvBets,avgCLV,streak,start,peak,dd,ddMult,dailyPnl,dailyExposure,total:b.length,void_bets};
+}
+
+// ═══════════════════════════════════ HEADER ═══════════════════════════════════
+function updateHeader(){
+  const s=calcStats();
+  const sgn=s.pnl>=0?'+':'';
+  document.getElementById('h-bk').textContent='€'+s.bankroll.toFixed(2);
+  const dp=document.getElementById('h-dp');dp.textContent=sgn+'€'+Math.abs(s.pnl).toFixed(2);dp.style.color=s.pnl>=0?'var(--g)':'var(--r)';
+  const ri=document.getElementById('h-roi');ri.textContent=sgn+s.roi.toFixed(2)+'%';ri.style.color=s.roi>=0?'var(--g)':'var(--r)';
+  document.getElementById('h-exp').textContent='€'+s.openStake.toFixed(0)+' / €'+(s.start*.2).toFixed(0);
+  document.getElementById('h-open').textContent=s.open.length;
+  document.getElementById('h-wr').textContent=s.wr!==null?s.wr.toFixed(0)+'%':'—';
+  // Goal milestone
+  const ms=getCurrentMilestone(s.bankroll);
+  if(ms) document.getElementById('h-goal').textContent=ms.desc;
+  // Dashboard KPIs
+  ['d-bk','p-bk'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='€'+s.bankroll.toFixed(2);});
+  ['d-pnl','p-pnl'].forEach(id=>{const e=document.getElementById(id);if(e){e.textContent=sgn+'€'+Math.abs(s.pnl).toFixed(2);e.className='sv '+(s.pnl>=0?'pos':'neg');}});
+  ['d-roi','p-roi'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='ROI '+sgn+s.roi.toFixed(2)+'%';});
+  ['d-wr','p-wr'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=s.wr!==null?s.wr.toFixed(0)+'%':'—';});
+  ['d-settled','p-set'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=s.settled.length+' settled';});
+  const dd=document.getElementById('p-dd');if(dd)dd.textContent=s.pnl<0?Math.abs(s.roi).toFixed(1)+'%':'0.0%';
+  const ds=document.getElementById('d-streak');if(ds)ds.textContent=s.streak;
+  const dop=document.getElementById('d-open');if(dop)dop.textContent=s.open.length;
+  const dep=document.getElementById('d-exp');if(dep)dep.textContent='€'+s.openStake.toFixed(0)+' exposed';
+  ['tr-n'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=s.total;});
+  const tclv=document.getElementById('tr-clv');if(tclv)tclv.textContent=s.avgCLV!==null?(s.avgCLV>=0?'+':'')+s.avgCLV.toFixed(1)+'%':'—';
+  const tacc=document.getElementById('tr-acc');if(tacc)tacc.textContent=s.wr!==null?s.wr.toFixed(0)+'%':'—';
+  const trp=document.getElementById('tr-rpnl');if(trp)trp.textContent=(s.pnl>=0?'+€':'−€')+Math.abs(s.pnl).toFixed(2);
+  const rclv=document.getElementById('r-clv');if(rclv)rclv.textContent=s.avgCLV!==null?(s.avgCLV>=0?'+':'')+s.avgCLV.toFixed(1)+'%':'—';
+  const rcn=document.getElementById('r-clv-n');if(rcn)rcn.textContent=s.clvBets.length;
+  const em=document.getElementById('eq-meta');if(em)em.textContent='€'+s.bankroll.toFixed(2)+' ('+sgn+s.roi.toFixed(1)+'%)';
+}
+
+function getCurrentMilestone(bk){
+  for(const m of MILESTONES){if(bk<m.to)return m;}
+  return MILESTONES[MILESTONES.length-1];
+}
+
+function startClock(){
+  function tick(){const n=new Date();const mo=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][n.getMonth()];document.getElementById('clock').innerHTML=`${String(n.getDate()).padStart(2,'0')} ${mo} ${n.getFullYear()} &nbsp; ${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}:${String(n.getSeconds()).padStart(2,'0')}`;}
+  tick();setInterval(tick,1000);
+}
+
+function updateWSIndicator(connected){
+  const dot=document.getElementById('ws-dot');
+  const lbl=document.getElementById('ws-label');
+  if(!dot||!lbl)return;
+  if(connected){dot.style.background='var(--g)';lbl.textContent='LIVE';}
+  else{dot.style.background='var(--r)';lbl.textContent='OFFLINE';}
+}
+
+async function runAgentManual(){
+  const btn=document.getElementById('run-agent-btn');
+  if(!API_BASE){showToast('⚠ No API connection — offline mode');return;}
+  if(btn){btn.style.color='var(--gold)';btn.textContent='⚡ Running...';}
+  try{
+    await apiFetch('/api/run-agent',{method:'POST'});
+    showToast('✓ Agent cycle triggered — recommendations will update shortly');
+    setTimeout(()=>{fetchRecommendations();fetchPortfolio();},5000);
+  }catch(e){
+    showToast('⚠ Agent trigger failed — check Railway logs');
+  }finally{
+    if(btn){btn.style.color='';btn.innerHTML='⚡ Run Agent';}
+  }
+}
+
+// ═══════════════════════════════════ RENDER ═══════════════════════════════════
+function renderTicker(){const txt=TICKER_TEXT.join('&nbsp;&nbsp;·&nbsp;&nbsp;');document.getElementById('ti').innerHTML=txt+'&nbsp;&nbsp;&nbsp;&nbsp;'+txt;}
+
+function renderAlerts(){
+  const html=ALERTS.map(a=>`<div class="ali a${a.level}"><div class="ali-dot"></div><div><div class="ali-t"><span class="chip ${a.level==='hi'?'cr':a.level==='md'?'cgold':'cg'}" style="margin-right:5px">${a.tag}</span>${a.head}</div><div class="ali-s">${a.sub}</div></div></div>`).join('');
+  ['d-alerts','risk-alerts'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=html;});
+}
+
+function renderNews(filter='all'){
+  const items=filter==='all'?NEWS_DATA:NEWS_DATA.filter(n=>n.cat===filter);
+  const html=items.map(n=>`<div class="ni"><div class="nt"><span class="chip ${n.cls}">${n.cat}</span> <span style="color:${n.impact==='high'?'var(--r)':n.impact==='med'?'var(--gold)':'var(--t3)'}">${n.impact.toUpperCase()} IMPACT</span></div><div class="nh">${n.head}</div><div class="nm">${n.meta}</div></div>`).join('');
+  ['news-terminal','d-news','live-news'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=html;});
+}
+
+function filterNews(cat,btn){
+  document.querySelectorAll('#tab-live .btn').forEach(b=>b.classList.remove('bg'));
+  btn.classList.add('bg');renderNews(cat);
+}
+
+function getFixtureStatus(fix){
+  if(!fix.iso)return{label:'',locked:false,color:'var(--t3)',ms:null};
+  const koMs=new Date(fix.iso).getTime();
+  const now=Date.now();
+  const diff=koMs-now;
+  if(diff<=0)return{label:'LOCKED',locked:true,color:'var(--r)',ms:koMs};
+  const hrs=Math.floor(diff/3600000);
+  const mins=Math.floor((diff%3600000)/60000);
+  if(hrs>48){const days=Math.floor(hrs/24);return{label:days+'d',locked:false,color:'var(--t3)',ms:koMs};}
+  if(hrs>=1)return{label:hrs+'h '+mins+'m',locked:false,color:hrs<3?'var(--gold)':'var(--t3)',ms:koMs};
+  return{label:mins+'m',locked:false,color:'var(--r)',ms:koMs};
+}
+
+function renderFixtures(){
+  const html=FIXTURES.map(f=>{
+    const st=getFixtureStatus(f);
+    const koStr=f.ko?`<span style="font-family:var(--mono);font-size:9px;color:var(--t3)">${f.ko} UTC</span>`:'';
+    const cdStr=`<span style="font-family:var(--mono);font-size:9px;font-weight:700;color:${st.color};margin-left:4px">${st.label}</span>`;
+    const lockBg=st.locked?'opacity:.5;pointer-events:none;':'';
+    return `<div class="fx" style="${lockBg}">
+      <div class="fx-d">${f.date} · ${f.group} ${koStr}${cdStr}</div>
+      <div class="fx-t"><div>${f.home}</div><div style="color:var(--t2)">${f.away}</div></div>
+      <div class="fx-odds"><div class="fx-o">${f.h}</div><div class="fx-o">${f.d}</div><div class="fx-o">${f.a}</div></div>
+    </div>`;
+  }).join('');
+  ['d-fixtures','live-upcoming'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=html;});
+  // Refresh countdowns every minute
+  if(!renderFixtures._timer)renderFixtures._timer=setInterval(renderFixtures,60000);
+}
+
+function renderTourOdds(){
+  const e=document.getElementById('tour-odds-news');if(!e)return;
+  e.innerHTML=TOUR_ODDS.map((t,i)=>`<div class="fx" style="padding:5px 10px"><div style="width:16px;font-size:10px;color:var(--t3);font-family:var(--mono)">${i+1}</div><div style="flex:1;font-size:12px;font-weight:500">${t.f} ${t.t}</div><div class="gold" style="min-width:38px;text-align:right">${t.o}</div><div style="font-size:10px;color:var(--t3);min-width:46px;text-align:right;font-family:var(--mono)">${t.p}</div></div>`).join('');
+}
+
+function oppRow(r,feedId){
+  const ec=r.ev>=10?'var(--g)':r.ev>=5?'var(--gold)':'var(--t2)';
+  const ac=r.audit.score>=8?'var(--g)':r.audit.score>=6?'var(--gold)':'var(--r)';
+  const rc=r.risk==='Low'?'cg':r.risk==='Moderate'?'cgold':'cr';
+  const aChip=r.audit.status==='Approved'?'cg':r.audit.status==='Approved with Warnings'?'cgold':'cr';
+  const clvColor=r.clv_outlook==='Positive'?'var(--g)':r.clv_outlook==='Negative'?'var(--r)':'var(--t3)';
+  const clvIcon=r.clv_outlook==='Positive'?'↑':r.clv_outlook==='Negative'?'↓':'→';
+  const uncertColor=(r.uncertainty||0)<0.1?'var(--g)':(r.uncertainty||0)<0.2?'var(--gold)':'var(--r)';
+  return `<div class="or" onclick="openTicket('${r.id}')">
+    <div><div style="font-weight:600;font-size:12px">${r.match.split(' vs ')[0]}<span style="color:var(--t3)"> vs </span>${r.match.split(' vs ')[1]||''}</div>
+      <div style="font-size:9px;color:var(--t3);margin-top:2px">${r.lineup_flag||'—'}</div>
+    </div>
+    <div style="font-size:11px;font-weight:600">${r.sel}</div>
+    <div class="gold mono">${r.odds}</div>
+    <div style="color:var(--cy);font-family:var(--mono)">${r.modelP}%</div>
+    <div style="color:${ec};font-family:var(--mono);font-weight:700">+${r.ev}%</div>
+    <div class="pos mono">€${r.stake}</div>
+    <div style="font-size:10px">
+      <span style="color:${clvColor};font-weight:700">${clvIcon} ${r.clv_outlook||'—'}</span>
+      <div style="color:${uncertColor};font-size:9px">U:${((r.uncertainty||0)*100).toFixed(0)}%</div>
+    </div>
+    <div><span class="chip ${aChip}" style="color:${ac}">${r.audit.score}/10</span></div>
+    <div style="display:flex;gap:4px">
+      <button class="btn bg bsm share-hide" onclick="event.stopPropagation();addToBasket({id:'rec_${r.id}',match:'${r.match}',sel:'${r.sel}',market:'${r.market}',odds:${r.odds},modelP:${r.modelP},stake:${r.stake},date:'${r.date}',conf:${r.conf},risk:'${r.risk}',rationale:''})">+ Basket</button>
+    </div>
+  </div>`;
+}
+
+function renderFeeds(){
+  const sorted=[...RECS].sort((a,b)=>b.ev-a.ev);
+  ['dash-feed','mkt-singles'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=sorted.map(r=>oppRow(r,id)).join('');});
+}
+
+function renderActionCenter(){
+  const el=document.getElementById('action-center');if(!el)return;
+  const s=calcStats();
+  const pending=RECS.filter(r=>!STATE.bets.find(b=>b.recId===r.id&&b.status!=='void'));
+  const actions=[];
+  pending.forEach(r=>{actions.push({type:'p',dot:'ad-p',title:`Place Bet: ${r.sel} — ${r.match}`,sub:`${r.market} · Odds: ${r.odds} · Stake: €${r.stake} · Audit: ${r.audit.score}/10`,deadline:`Jun ${r.date.split('-')[2]}`,rec:r});});
+  s.open.forEach(b=>{actions.push({type:'r',dot:'ad-y',title:`Settle result: ${b.match}`,sub:`${b.selection} · €${b.stake} · Status: Pending`,deadline:'After match',bid:b.id});});
+  if(!actions.length){el.innerHTML='<div style="padding:12px;color:var(--t3);font-size:12px">All caught up. No pending actions.</div>';return;}
+  el.innerHTML=actions.map(a=>`<div class="action-item">
+    <div class="action-dot ${a.dot}"></div>
+    <div class="action-body">
+      <div class="action-title">${a.title}</div>
+      <div class="action-sub">${a.sub}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <div class="action-deadline">${a.deadline}</div>
+      ${a.rec?`<button class="btn bg bsm share-hide" onclick="openExec('${a.rec.id}')">Place</button><button class="btn bo bsm share-hide" onclick="skipRec('${a.rec.id}')">Skip</button>`:''}
+      ${a.bid?`<button class="btn bsm share-hide" style="background:rgba(41,121,255,.12);color:var(--blue);border:1px solid rgba(41,121,255,.25)" onclick="openSettle('${a.bid}')">Settle Result</button>`:''}
+    </div>
+  </div>`).join('');
+  document.getElementById('action-count').textContent=actions.length+' actions';
+}
+
+function renderMilestones(){
+  const el=document.getElementById('milestones-panel');if(!el)return;
+  const s=calcStats();const bk=s.bankroll;
+  el.innerHTML=MILESTONES.map(m=>{
+    const done=bk>=m.to;
+    const active=bk>=m.from&&bk<m.to;
+    const pct=active?Math.min(100,((bk-m.from)/(m.to-m.from))*100):done?100:0;
+    const rem=active?'€'+(m.to-bk).toFixed(0)+' remaining':done?'Complete ✓':'Locked';
+    const col=done?'var(--g)':active?'var(--blue)':'var(--b3)';
+    return `<div class="milestone">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;font-weight:700;color:${active?'var(--t1)':done?'var(--g)':'var(--t3)'}">${m.label} — ${m.desc}</span>
+        <span style="font-family:var(--mono);font-size:11px;color:${col}">${rem}</span>
+      </div>
+      <div class="ms-bar"><div class="ms-fill" style="width:${pct}%;background:${col}"></div></div>
+      <div style="font-size:10px;color:var(--t3);font-family:var(--mono)">${pct.toFixed(0)}% complete</div>
+    </div>`;
+  }).join('');
+}
+
+function renderAccumulators(){
+  const el=document.getElementById('acc-grid');if(!el)return;
+  el.innerHTML=ACCS.map(a=>{
+    const legs=a.legs.map(id=>RECS.find(r=>r.id===id));
+    const aChip=a.audit.status==='Approved'?'cg':'cgold';
+    const aCol=a.audit.score>=8?'var(--g)':'var(--gold)';
+    const corrColor=a.correlation_score<0.10?'var(--g)':a.correlation_score<0.20?'var(--gold)':'var(--r)';
+    return `<div class="acc-card" style="border-top:2px solid ${a.color}">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <div class="acc-type" style="color:${a.color}">${a.type} Accumulator</div>
+        ${a.mixed_market?`<span style="font-size:9px;font-weight:700;background:rgba(41,121,255,.15);color:var(--blt);padding:1px 6px;border-radius:3px;letter-spacing:.05em">MIX ✓</span>`:''}
+      </div>
+      <div style="font-size:10px;color:var(--t3);margin-bottom:6px">
+        Correlation: <span style="color:${corrColor};font-weight:700">${(a.correlation_score*100).toFixed(0)}%</span> — ${a.correlation}
+      </div>
+      <div class="acc-legs">
+        ${legs.map(r=>`<div class="acc-leg">
+          <span style="color:var(--g);font-size:10px;font-family:var(--mono)">✓</span>
+          <span style="flex:1;font-weight:600;font-size:12px">${r.match.split(' vs ')[0]}</span>
+          <span style="font-size:11px;color:var(--t2)">${r.sel}</span>
+          <span class="gold mono" style="font-size:11px">${r.odds}</span>
+        </div>`).join('')}
+      </div>
+      <div class="acc-metrics">
+        <div class="acc-m"><div class="av gold">${a.combinedOdds}</div><div class="al">Combined</div></div>
+        <div class="acc-m"><div class="av" style="color:var(--cy)">${a.modelProb}%</div><div class="al">Model P</div></div>
+        <div class="acc-m"><div class="av pos">${a.ev}</div><div class="al">EV</div></div>
+        <div class="acc-m"><div class="av pos">€${a.stake}</div><div class="al">Stake</div></div>
+        <div class="acc-m"><div class="av" style="color:${aCol}">${a.audit.score}/10</div><div class="al">Audit</div></div>
+      </div>
+      <div style="margin-bottom:8px;font-size:11px;color:var(--t2)"><span class="chip ${aChip}" style="margin-right:6px">${a.audit.status}</span>${a.audit.notes}</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn bg bsm" onclick="openAccExec('${a.id}')">Place Accumulator</button>
+        <button class="btn bo bsm">Skip</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderDailyCard(){
+  const el=document.getElementById('daily-card');if(!el)return;
+  const t1=RECS.filter(r=>r.tier===1).sort((a,b)=>b.ev-a.ev);
+  const t2=RECS.filter(r=>r.tier===2).sort((a,b)=>b.ev-a.ev);
+  const bestAcc=ACCS[0];
+  el.innerHTML=`
+    <div style="margin-bottom:12px">
+      <div style="font-size:10px;color:var(--g);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Tier 1 — Highest Conviction</div>
+      ${t1.map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:6px 8px;background:var(--bg3);border-radius:3px;margin-bottom:4px">
+        <span class="mono" style="color:var(--g);font-weight:700">✓</span>
+        <span style="flex:1;font-weight:600;font-size:12px">${r.match} — ${r.sel}</span>
+        <span class="gold mono">${r.odds}</span>
+        <span class="pos mono">€${r.stake}</span>
+        <span class="chip cg">${r.conf}/10</span>
+        <span class="chip ${r.audit.status==='Approved'?'cg':'cgold'}">${r.audit.score}/10</span>
+        <button class="btn bg bsm" onclick="openExec('${r.id}')">Place</button>
+      </div>`).join('')}
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:10px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Tier 2 — Secondary Opportunities</div>
+      ${t2.map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:6px 8px;background:var(--bg3);border-radius:3px;margin-bottom:4px">
+        <span style="flex:1;font-weight:600;font-size:12px">${r.match} — ${r.sel}</span>
+        <span class="gold mono">${r.odds}</span>
+        <span class="pos mono">€${r.stake}</span>
+        <button class="btn bg bsm" onclick="openExec('${r.id}')">Place</button>
+      </div>`).join('')}
+    </div>
+    <div>
+      <div style="font-size:10px;color:var(--pur);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Tier 3 — AI Accumulator of the Day</div>
+      <div style="background:var(--bg3);border:1px solid var(--b2);border-radius:4px;padding:10px">
+        ${ACCS[1].legs.map(id=>RECS.find(r=>r.id===id)).map(r=>`<div style="font-size:12px;margin-bottom:3px"><span style="color:var(--g)">✓</span> ${r.match} — ${r.sel} <span class="gold mono">${r.odds}</span></div>`).join('')}
+        <div style="display:flex;align-items:center;gap:12px;margin-top:8px;padding-top:8px;border-top:1px solid var(--b)">
+          <div><div style="font-size:9px;color:var(--t3)">COMBINED</div><div class="gold mono">${ACCS[1].combinedOdds}</div></div>
+          <div><div style="font-size:9px;color:var(--t3)">STAKE</div><div class="pos mono">€${ACCS[1].stake}</div></div>
+          <div><div style="font-size:9px;color:var(--t3)">EV</div><div class="pos mono">${ACCS[1].ev}</div></div>
+          <div><div style="font-size:9px;color:var(--t3)">AUDIT</div><div class="mono cgold chip">${ACCS[1].audit.score}/10</div></div>
+          <button class="btn bg bsm" style="margin-left:auto" onclick="openAccExec('${ACCS[1].id}')">Place Accumulator</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderPositions(){
+  const s=calcStats();
+  const ids=['d-positions','p-open-tbl'];
+  ids.forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    if(!s.open.length){el.innerHTML='<div style="padding:10px;color:var(--t3);font-size:12px">No open positions.</div>';return;}
+    let h=`<table class="dt"><thead><tr><th>Match</th><th>Selection</th><th class="r">Odds</th><th class="r">Stake</th><th class="r">To Win</th><th class="share-hide">Settle</th></tr></thead><tbody>`;
+    s.open.forEach(b=>{const pot=(b.stake*b.odds-b.stake).toFixed(2);h+=`<tr><td style="font-weight:600">${b.match}</td><td style="color:var(--t2)">${b.selection}</td><td class="r gold mono">${b.odds}</td><td class="r mono">€${b.stake}</td><td class="r pos">+€${pot}</td><td class="share-hide"><button class="btn bsm" style="background:rgba(41,121,255,.12);color:var(--blue);border:1px solid rgba(41,121,255,.25)" onclick="openSettle('${b.id}')">Settle Result</button></td></tr>`;});
+    h+='</tbody></table>';el.innerHTML=h;
+  });
+}
+
+function renderLedger(){
+  const el=document.getElementById('ledger-body');if(!el)return;
+  const bets=[...STATE.bets].reverse();
+  if(!bets.length){el.innerHTML='<tr><td colspan="13" style="padding:18px;text-align:center;color:var(--t3)">No trades logged.</td></tr>';return;}
+  el.innerHTML=bets.map(b=>{
+    const pnl=b.status==='won'?+(b.stake*b.odds-b.stake).toFixed(2):b.status==='lost'?-b.stake:null;
+    const clv=b.closingOdds?((b.odds/b.closingOdds-1)*100).toFixed(1)+'%':'—';
+    const sc={pending:'cgold',won:'cg',lost:'cr',void:'cdim'}[b.status];
+    const sl={pending:'Pending',won:'Won ✓',lost:'Lost ✗',void:'Void'}[b.status];
+    const recOdds=b.recOdds||b.odds;
+    return `<tr>
+      <td class="mono" style="color:var(--t3)">${new Date(b.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</td>
+      <td style="font-weight:600">${b.match}</td>
+      <td style="color:var(--t2);max-width:110px">${b.market||'—'}</td>
+      <td>${b.selection}</td>
+      <td class="r mono" style="color:var(--t3)">${recOdds}</td>
+      <td class="r mono gold">${b.odds}</td>
+      <td class="r mono">€${b.stake}</td>
+      <td class="c">${b.confidence||'—'}</td>
+      <td class="c"><span class="chip cdim">${b.isAccumulator?'Acca':'Single'}</span></td>
+      <td class="c"><span class="chip ${sc}">${sl}</span></td>
+      <td class="r mono ${pnl===null?'neu':pnl>=0?'pos':'neg'}">${pnl!==null?(pnl>=0?'+':'')+'€'+Math.abs(pnl).toFixed(2):'—'}</td>
+      <td class="r mono" style="color:${clv!=='—'&&parseFloat(clv)>0?'var(--g)':'var(--r)'}">${clv}</td>
+      <td class="share-hide" style="display:flex;gap:3px">${b.status==='pending'?`<button class="btn bsm" style="background:rgba(41,121,255,.12);color:var(--blue);border:1px solid rgba(41,121,255,.25)" onclick="openSettle('${b.id}')">Settle</button>`:`<button class="btn bo bsm" onclick="editBet('${b.id}')">Edit</button>`}<button class="btn bsm" style="background:rgba(255,59,92,.1);color:var(--r);border:1px solid rgba(255,59,92,.2)" onclick="delBet('${b.id}')">Del</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderLiveCenter(){
+  const el=document.getElementById('live-matches');if(!el)return;
+  el.innerHTML=`<div style="text-align:center;padding:24px;color:var(--t3)">
+    <div style="font-size:32px;margin-bottom:8px">⚽</div>
+    <div style="font-size:14px;font-weight:600;color:var(--t2)">No matches currently live</div>
+    <div style="font-size:12px;margin-top:6px">Tournament begins <span style="color:var(--gold)">11 June 2026</span></div>
+    <div style="font-size:12px;margin-top:3px">First match: Mexico vs South Africa · Estadio Azteca</div>
+  </div>`;
+}
+
+// ═══════════════════════════════════ CHARTS ═══════════════════════════════════
+Chart.defaults.color='#46587a';Chart.defaults.borderColor='#1a2540';
+
+function initCharts(){
+  const s=calcStats();
+  const ce=document.getElementById('chart-eq');
+  if(ce){if(chartEq)chartEq.destroy();
+    const pts=[s.start];STATE.bets.forEach(b=>{if(b.status==='won')pts.push(pts[pts.length-1]+(b.stake*b.odds-b.stake));else if(b.status==='lost')pts.push(pts[pts.length-1]-b.stake);});
+    if(pts.length<2)pts.push(s.start);
+    chartEq=new Chart(ce,{type:'line',data:{labels:pts.map((_,i)=>i===0?'Start':'T'+i),datasets:[{data:pts,borderColor:'#2979ff',backgroundColor:'rgba(41,121,255,.08)',fill:true,tension:.4,pointRadius:pts.length<10?4:2,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(26,37,64,.4)'},ticks:{color:'#46587a',font:{size:10}}},y:{grid:{color:'rgba(26,37,64,.4)'},ticks:{color:'#46587a',font:{size:10},callback:v=>'€'+v}}}}});}
+
+  const cp=document.getElementById('chart-perf');
+  if(cp){if(chartPerf)chartPerf.destroy();
+    chartPerf=new Chart(cp,{type:'line',data:{labels:['Start'],datasets:[{data:[s.start],borderColor:'#00d97e',tension:.4,fill:false,borderWidth:2,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{grid:{color:'rgba(26,37,64,.4)'},ticks:{color:'#46587a',font:{size:10},callback:v=>'€'+v}}}}});}
+
+  const cx=document.getElementById('chart-exp');
+  if(cx){if(chartExpChart)chartExpChart.destroy();
+    const mm={};STATE.bets.filter(b=>b.status==='pending').forEach(b=>{mm[b.market||'Other']=(mm[b.market||'Other']||0)+b.stake;});
+    const keys=Object.keys(mm),vals=Object.values(mm);
+    chartExpChart=new Chart(cx,{type:'doughnut',data:{labels:keys.length?keys:['No positions'],datasets:[{data:vals.length?vals:[1],backgroundColor:['#2979ff','#00d97e','#f5a623','#7c5cfc','#00bcd4','#ff3b5c'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{boxWidth:7,padding:6,color:'#8496b0',font:{size:9}}}}}});}
+}
+
+// ═══════════════════════════════════ TRADE TICKET ═══════════════════════════════════
+function openTicket(id){
+  const r=RECS.find(x=>x.id===id);if(!r)return;
+  ticketRec=r;
+  document.getElementById('tk-title').textContent=r.match;
+  document.getElementById('tk-sub').textContent=r.date+' · '+r.market+' · Model v4';
+  const ac=r.audit.score>=8?'var(--g)':'var(--gold)';
+  const aChip=r.audit.status==='Approved'?'cg':'cgold';
+  document.getElementById('tk-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px">
+      ${[['Model',''+r.modelP+'%','var(--g)'],['Market',''+r.mktP+'%','var(--t2)'],['Edge','+'+r.edge+'%','var(--cy)'],['EV','+'+r.ev+'%',r.ev>=10?'var(--g)':'var(--gold)']].map(([l,v,c])=>`<div style="background:var(--bg2);border:1px solid var(--b);border-radius:3px;padding:8px;text-align:center"><div style="font-family:var(--mono);font-size:16px;font-weight:700;color:${c}">${v}</div><div style="font-size:9px;color:var(--t3);margin-top:2px;text-transform:uppercase">${l}</div></div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px">
+      ${(()=>{
+        const clvColor=r.clv_outlook==='Positive'?'var(--g)':r.clv_outlook==='Negative'?'var(--r)':'var(--t3)';
+        const clvIcon=r.clv_outlook==='Positive'?'↑ ':r.clv_outlook==='Negative'?'↓ ':'→ ';
+        const uncertColor=(r.uncertainty||0)<0.1?'var(--g)':(r.uncertainty||0)<0.2?'var(--gold)':'var(--r)';
+        const uncertVal=((r.uncertainty||0)*100).toFixed(0)+'%';
+        const kpct=(r.kelly_pct||0)+'%';
+        const lineup=r.lineup_flag||'—';
+        const lineupColor=lineup==='Full Squad'?'var(--g)':lineup.includes('Rotation')?'var(--gold)':'var(--t3)';
+        return [
+          ['CLV',clvIcon+(r.clv_outlook||'—'),clvColor],
+          ['Uncertainty',uncertVal,uncertColor],
+          ['Kelly%',kpct,'var(--cy)'],
+          ['Lineup',lineup,lineupColor]
+        ].map(([l,v,c])=>`<div style="background:var(--bg2);border:1px solid var(--b);border-radius:3px;padding:8px;text-align:center"><div style="font-family:var(--mono);font-size:13px;font-weight:700;color:${c}">${v}</div><div style="font-size:9px;color:var(--t3);margin-top:2px;text-transform:uppercase">${l}</div></div>`).join('');
+      })()}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div style="background:var(--bg2);border:1px solid rgba(41,121,255,.3);border-radius:4px;padding:12px">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--blt);font-weight:700;margin-bottom:6px">⚡ Betting Agent — ${r.betting.score}/10</div>
+        <div style="font-size:12px;color:var(--t2);line-height:1.6">${r.rationale}</div>
+        <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">${r.factors.map(f=>`<span class="chip cg" style="font-size:10px">✓ ${f}</span>`).join('')}</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid ${r.audit.status==='Approved'?'rgba(0,217,126,.3)':'rgba(245,166,35,.3)'};border-radius:4px;padding:12px">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:${ac};font-weight:700;margin-bottom:6px">⚖ Audit Agent (CRO) — ${r.audit.score}/10 · <span class="chip ${aChip}">${r.audit.status}</span></div>
+        <div style="font-size:12px;color:var(--t2);line-height:1.6">${r.audit.notes}</div>
+        ${r.audit.warnings.length?`<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">${r.audit.warnings.map(w=>`<span class="chip cgold">⚠ ${w}</span>`).join('')}</div>`:''}
+        <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">${r.risks.map(f=>`<span class="chip cgold" style="font-size:10px">⚠ ${f}</span>`).join('')}</div>
+      </div>
+    </div>
+    <div style="background:#000;border:1px solid var(--b2);border-radius:4px;padding:12px">
+      <div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Trade Summary</div>
+      ${[['Match',r.match],['Market',r.market],['Selection',r.sel],['Market Odds',r.odds],['Fair Odds (Model)',r.fairOdds],['Expected Value','+'+r.ev+'%'],['Audit',r.audit.score+'/10 — '+r.audit.status]].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(26,37,64,.4);font-size:12px"><span style="color:var(--t3)">${k}</span><span style="font-weight:600">${v}</span></div>`).join('')}
+      <div style="display:flex;justify-content:space-between;padding-top:8px;font-size:14px;font-weight:700;font-family:var(--mono)"><span>Recommended Stake</span><span class="pos">€${r.stake}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);font-family:var(--mono);margin-top:3px"><span>Potential Return</span><span class="pos">+€${(r.stake*r.odds-r.stake).toFixed(2)}</span></div>
+    </div>`;
+  document.getElementById('ticket-ov').classList.add('open');
+}
+
+function closeTicket(){document.getElementById('ticket-ov').classList.remove('open');ticketRec=null;}
+function execFromTicket(){if(ticketRec){closeTicket();openExec(ticketRec.id);}}
+
+// ═══════════════════════════════════ BET SLIP ═══════════════════════════════════
+function openExec(id){
+  const r=RECS.find(x=>x.id===id);if(!r)return;
+  execRec=r;
+  // Populate selection card
+  document.getElementById('bs-match-label').textContent=r.match+' · '+r.date;
+  document.getElementById('bs-sel-label').textContent=r.sel;
+  document.getElementById('bs-market-label').textContent=r.market;
+  document.getElementById('bs-odds-val').textContent=r.odds;
+  document.getElementById('bs-ev-val').textContent='+'+r.ev+'%';
+  const auditEl=document.getElementById('bs-audit-val');
+  auditEl.textContent=r.audit.score+'/10';
+  auditEl.style.color=r.audit.score>=8?'var(--g)':'var(--gold)';
+  const chip=document.getElementById('bs-audit-chip');
+  chip.textContent=r.audit.status==='Approved'?'✓ Approved':'⚠ Warnings';
+  chip.className='chip '+(r.audit.status==='Approved'?'cg':'cgold');
+  // Set rec button label
+  document.getElementById('bs-rec-btn').textContent='Rec €'+r.stake;
+  // Pre-fill stake and odds
+  document.getElementById('bs-stake').value=r.stake;
+  document.getElementById('bs-actual-odds').value=r.odds;
+  updateBetSlip();
+  document.getElementById('exec-ov').classList.add('open');
+  setTimeout(()=>document.getElementById('bs-stake').focus(),100);
+}
+
+function openAccExec(id){
+  const a=ACCS.find(x=>x.id===id);if(!a)return;
+  execRec={isAccumulator:true,acc:a,id:'acc_'+a.id,
+    match:'Accumulator ('+a.type+')',
+    sel:a.legs.map(lid=>RECS.find(r=>r.id===lid)?.sel||'—').join(' + '),
+    odds:a.combinedOdds,stake:a.stake,market:'Accumulator',
+    confidence:a.audit.score,risk:'Moderate',audit:a.audit,
+    recOdds:a.combinedOdds,ev:a.ev,date:new Date().toISOString().split('T')[0]};
+  document.getElementById('bs-match-label').textContent='Accumulator · '+a.type;
+  document.getElementById('bs-sel-label').textContent=execRec.sel;
+  document.getElementById('bs-market-label').textContent=a.legs.length+' legs · Combined';
+  document.getElementById('bs-odds-val').textContent=a.combinedOdds;
+  document.getElementById('bs-ev-val').textContent=a.ev;
+  const auditEl=document.getElementById('bs-audit-val');
+  auditEl.textContent=a.audit.score+'/10';auditEl.style.color='var(--g)';
+  const chip=document.getElementById('bs-audit-chip');chip.textContent='✓ Approved';chip.className='chip cg';
+  document.getElementById('bs-rec-btn').textContent='Rec €'+a.stake;
+  document.getElementById('bs-stake').value=a.stake;
+  document.getElementById('bs-actual-odds').value=a.combinedOdds;
+  updateBetSlip();
+  document.getElementById('exec-ov').classList.add('open');
+}
+
+function setQuickStake(v){
+  const s=calcStats();
+  const val=v==='rec'?(execRec?execRec.stake:10):(v==='max'?Math.min(25,s.bankroll):v);
+  document.getElementById('bs-stake').value=val;
+  document.querySelectorAll('.bs-quick button').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  updateBetSlip();
+}
+
+function updateBetSlip(){
+  if(!execRec)return;
+  const stake=parseFloat(document.getElementById('bs-stake').value)||0;
+  const odds=parseFloat(document.getElementById('bs-actual-odds').value)||parseFloat(execRec.odds)||1;
+  const ret=stake*odds;
+  const profit=ret-stake;
+  const prob=odds>0?(1/odds*100):0;
+  const s=calcStats();
+
+  document.getElementById('bs-return').textContent='€'+ret.toFixed(2);
+  document.getElementById('bs-profit').textContent=(profit>=0?'+€':'−€')+Math.abs(profit).toFixed(2);
+  document.getElementById('bs-profit').className='mono '+(profit>=0?'pos':'neg');
+  document.getElementById('bs-prob').textContent=prob.toFixed(1)+'%';
+  document.getElementById('bs-bal-current').textContent='€'+s.bankroll.toFixed(2);
+  const after=s.bankroll-stake;
+  const afterEl=document.getElementById('bs-bal-after');
+  afterEl.textContent='€'+after.toFixed(2);
+  afterEl.style.color=after<0?'var(--r)':stake>0?'var(--gold)':'var(--g)';
+
+  // Odds diff vs recommended
+  const diffO=odds-(parseFloat(execRec.odds)||odds);
+  const diffEl=document.getElementById('bs-odds-diff');
+  if(Math.abs(diffO)>0.001){
+    diffEl.textContent=(diffO>0?'+':'')+diffO.toFixed(2)+' vs rec';
+    diffEl.style.color=diffO>0?'var(--g)':'var(--r)';
+  } else {
+    diffEl.textContent='= rec ✓';diffEl.style.color='var(--g)';
+  }
+
+  const btn=document.getElementById('bs-confirm-btn');
+  if(stake>0&&odds>1){
+    btn.disabled=false;
+    btn.textContent=`Place Bet — €${stake.toFixed(0)} to win €${profit.toFixed(2)}`;
+  } else {
+    btn.disabled=true;btn.textContent='Place Bet — €0 to win €0';
+  }
+}
+
+async function confirmExec(){
+  if(!execRec)return;
+  const as=parseFloat(document.getElementById('bs-stake').value);
+  const ao=parseFloat(document.getElementById('bs-actual-odds').value);
+  if(isNaN(as)||as<=0||isNaN(ao)||ao<=1){return;}
+  const prevBal=calcStats().bankroll;
+  closeExec();
+  if(API_BASE){
+    try{
+      await apiFetch('/api/bets',{method:'POST',body:JSON.stringify({
+        match:execRec.match,date:execRec.date||new Date().toISOString().split('T')[0],
+        market:execRec.market,selection:execRec.sel,
+        rec_odds:execRec.odds,actual_odds:ao,rec_stake:execRec.stake,actual_stake:as,
+        confidence:execRec.confidence||execRec.conf||7,risk:execRec.risk||'Moderate',
+        reasoning:'Placed via AI recommendation. '+(execRec.rationale||execRec.audit?.notes||''),
+        is_accumulator:execRec.isAccumulator||false,rec_id:execRec.id||null
+      })});
+      await fetchBets();await fetchPortfolio();
+      animateBalance(prevBal,prevBal-as,'down');return;
+    }catch(e){console.warn('API bet save failed, using local state',e);}
+  }
+  const b={id:'b'+Date.now(),match:execRec.match,date:execRec.date||new Date().toISOString().split('T')[0],
+    market:execRec.market,selection:execRec.sel,recOdds:execRec.odds,odds:ao,
+    recStake:execRec.stake,stake:as,confidence:execRec.confidence||execRec.conf,
+    risk:execRec.risk,reason:'Placed via AI recommendation. '+(execRec.rationale||execRec.audit?.notes||''),
+    status:'pending',closingOdds:null,isAccumulator:execRec.isAccumulator||false,
+    recId:execRec.id,createdAt:new Date().toISOString()};
+  STATE.bets.push(b);saveState();renderAll();
+  animateBalance(prevBal,prevBal-as,'down');
+}
+
+function closeExec(){document.getElementById('exec-ov').classList.remove('open');execRec=null;}
+function skipRec(id){renderAll();}
+
+// ─── Balance animation ───
+function animateBalance(from,to,dir){
+  const el=document.getElementById('h-bk');if(!el)return;
+  const cls=dir==='up'?'num-up':'num-down';
+  el.classList.remove('num-up','num-down');
+  void el.offsetWidth; // reflow
+  el.classList.add(cls,'bal-flash');
+  const start=performance.now(),dur=600;
+  function step(now){
+    const t=Math.min((now-start)/dur,1);
+    const eased=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+    el.textContent='€'+(from+(to-from)*eased).toFixed(2);
+    if(t<1)requestAnimationFrame(step);
+    else{el.textContent='€'+to.toFixed(2);setTimeout(()=>{el.classList.remove(cls,'bal-flash');},800);}
+  }
+  requestAnimationFrame(step);
+}
+
+// ═══════════════════════════════════ SETTLE MODAL ═══════════════════════════════════
+let settleId=null,settleOutcome=null;
+
+function openSettle(id){
+  const b=STATE.bets.find(x=>x.id===id)||STATE.bets.find(x=>(x.rec_id||x.recId)===id);
+  if(!b)return;
+  settleId=id;settleOutcome=null;
+  document.getElementById('settle-match').textContent=b.match;
+  document.getElementById('settle-selection').textContent=b.selection||b.sel||'—';
+  document.getElementById('settle-odds').textContent=b.odds;
+  document.getElementById('settle-stake').textContent='€'+(b.stake||b.actual_stake||0);
+  document.getElementById('settle-potential').textContent='+€'+(((b.stake||b.actual_stake||0)*b.odds)-( b.stake||b.actual_stake||0)).toFixed(2);
+  document.getElementById('settle-closing').value='';
+  document.getElementById('settle-pnl-preview').style.display='none';
+  document.querySelectorAll('.settle-btn').forEach(x=>x.classList.remove('sel'));
+  document.getElementById('settle-confirm-btn').disabled=true;
+  document.getElementById('settle-ov').classList.add('open');
+}
+
+function selectOutcome(outcome,el){
+  settleOutcome=outcome;
+  document.querySelectorAll('.settle-btn').forEach(x=>x.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('settle-confirm-btn').disabled=false;
+  // Show P&L preview
+  const b=STATE.bets.find(x=>x.id===settleId);
+  if(!b)return;
+  const stake=b.stake||b.actual_stake||0;
+  const pnl=outcome==='won'?+(stake*b.odds-stake).toFixed(2):outcome==='lost'?-stake:0;
+  const prev=document.getElementById('settle-pnl-preview');
+  prev.style.display='block';
+  prev.innerHTML=outcome==='void'
+    ?'<span style="color:var(--t2)">Stake returned · No P&L impact</span>'
+    :`<span style="color:var(--t3)">P&L: </span><span class="${pnl>=0?'pos':'neg'}" style="font-weight:700">${pnl>=0?'+€':'−€'}${Math.abs(pnl).toFixed(2)}</span>` +
+     `<span style="color:var(--t3);margin-left:8px">New balance: </span><span style="font-weight:700">€${(calcStats().bankroll+pnl+(b.stake||0)).toFixed(2)}</span>`;
+}
+
+async function confirmSettle(){
+  if(!settleId||!settleOutcome)return;
+  const b=STATE.bets.find(x=>x.id===settleId);if(!b)return;
+  const closing=parseFloat(document.getElementById('settle-closing').value)||null;
+  const prevBal=calcStats().bankroll;
+  document.getElementById('settle-ov').classList.remove('open');
+  if(API_BASE){
+    try{
+      await apiFetch('/api/bets/'+settleId+'/settle',{method:'POST',
+        body:JSON.stringify({status:settleOutcome,closing_odds:closing})});
+      await fetchBets();await fetchPortfolio();
+      const stake=b.stake||b.actual_stake||0;
+      const pnl=settleOutcome==='won'?+(stake*b.odds-stake).toFixed(2):settleOutcome==='void'?stake:0;
+      if(pnl>0)animateBalance(prevBal,prevBal+pnl+stake,'up');
+      return;
+    }catch(e){console.warn('API settle failed, using local',e);}
+  }
+  b.status=settleOutcome;if(closing)b.closingOdds=closing;
+  saveState();
+  const stake=b.stake||0;
+  const pnl=settleOutcome==='won'?+(stake*b.odds-stake).toFixed(2):settleOutcome==='void'?stake:0;
+  renderAll();
+  if(pnl>0)animateBalance(prevBal,prevBal+pnl+stake,'up');
+  settleId=null;settleOutcome=null;
+}
+
+// ═══════════════════════════════════ BET MODAL ═══════════════════════════════════
+function openBetModal(prefill){
+  editId=null;
+  document.getElementById('f-match').value=prefill?.match||'';
+  document.getElementById('f-date').value=prefill?.date||new Date().toISOString().split('T')[0];
+  document.getElementById('f-market').value=prefill?.market||'1X2 — Match Result';
+  document.getElementById('f-selection').value=prefill?.selection||'';
+  document.getElementById('f-odds').value=prefill?.odds||'';
+  document.getElementById('f-stake').value=prefill?.stake||'';
+  document.getElementById('f-conf').value=prefill?.confidence||'';
+  document.getElementById('f-risk').value=prefill?.risk||'Low';
+  document.getElementById('f-reason').value=prefill?.reason||'';
+  document.getElementById('f-status').value='pending';
+  document.getElementById('f-closing').value='';
+  document.getElementById('bet-ov').classList.add('open');
+}
+function closeBetModal(){document.getElementById('bet-ov').classList.remove('open');editId=null;}
+
+async function saveBet(){
+  const match=document.getElementById('f-match').value.trim();
+  const odds=parseFloat(document.getElementById('f-odds').value);
+  const stake=parseFloat(document.getElementById('f-stake').value);
+  if(!match||isNaN(odds)||isNaN(stake)){alert('Match, Odds and Stake required.');return;}
+  const status=document.getElementById('f-status').value;
+  const closing=parseFloat(document.getElementById('f-closing').value)||null;
+  closeBetModal();
+  if(API_BASE){
+    try{
+      if(editId){
+        await apiFetch('/api/bets/'+editId,{method:'PUT',body:JSON.stringify({
+          status,actual_odds:odds,actual_stake:stake,closing_odds:closing
+        })});
+      } else {
+        await apiFetch('/api/bets',{method:'POST',body:JSON.stringify({
+          match, date:document.getElementById('f-date').value||new Date().toISOString().split('T')[0],
+          market:document.getElementById('f-market').value,
+          selection:document.getElementById('f-selection').value,
+          rec_odds:odds, actual_odds:odds, rec_stake:stake, actual_stake:stake,
+          confidence:parseFloat(document.getElementById('f-conf').value)||7,
+          risk:document.getElementById('f-risk').value,
+          reasoning:document.getElementById('f-reason').value,
+          status, closing_odds:closing, is_accumulator:false
+        })});
+      }
+      await fetchBets();await fetchPortfolio();return;
+    }catch(e){console.warn('API saveBet failed, falling back to local',e);}
+  }
+  const b={
+    id:editId||'b'+Date.now(), match,
+    date:document.getElementById('f-date').value, market:document.getElementById('f-market').value,
+    selection:document.getElementById('f-selection').value,
+    recOdds:odds, odds, recStake:stake, stake,
+    confidence:parseFloat(document.getElementById('f-conf').value)||7,
+    risk:document.getElementById('f-risk').value,
+    reason:document.getElementById('f-reason').value,
+    status, closingOdds:closing, isAccumulator:false, createdAt:new Date().toISOString()
+  };
+  if(editId){const i=STATE.bets.findIndex(x=>x.id===editId);if(i>=0)STATE.bets[i]=b;}else{STATE.bets.push(b);}
+  saveState();renderAll();
+}
+
+function editBet(id){
+  const b=STATE.bets.find(x=>x.id===id);if(!b)return;editId=id;
+  document.getElementById('f-match').value=b.match;document.getElementById('f-date').value=b.date;
+  document.getElementById('f-market').value=b.market;document.getElementById('f-selection').value=b.selection;
+  document.getElementById('f-odds').value=b.odds;document.getElementById('f-stake').value=b.stake;
+  document.getElementById('f-conf').value=b.confidence;document.getElementById('f-risk').value=b.risk;
+  document.getElementById('f-reason').value=b.reason||'';document.getElementById('f-status').value=b.status;
+  document.getElementById('f-closing').value=b.closingOdds||'';
+  document.getElementById('bet-ov').classList.add('open');
+}
+async function delBet(id){
+  if(!confirm('Delete?'))return;
+  if(API_BASE){try{await apiFetch('/api/bets/'+id,{method:'DELETE'});await fetchBets();await fetchPortfolio();return;}catch(e){console.warn('API delete failed',e);}}
+  STATE.bets=STATE.bets.filter(x=>x.id!==id);saveState();renderAll();
+}
+async function settleBet(id,res){
+  if(API_BASE){try{await apiFetch('/api/bets/'+id+'/settle',{method:'POST',body:JSON.stringify({status:res})});await fetchBets();await fetchPortfolio();return;}catch(e){console.warn('API settle failed',e);}}
+  const b=STATE.bets.find(x=>x.id===id);if(b){b.status=res;saveState();renderAll();}
+}
+
+// ═══════════════════════════════════ WHATSAPP ═══════════════════════════════════
+function openWA(){
+  const s=calcStats();
+  const today=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  const t1=RECS.filter(r=>r.tier===1).sort((a,b)=>b.ev-a.ev);
+  const acc=ACCS[1];
+  const accLegs=acc.legs.map(id=>RECS.find(r=>r.id===id));
+  const totalStake=t1.reduce((s,r)=>s+r.stake,0)+acc.stake;
+  let text=`*WC2026 Intel — Daily Card*\n${today}\n\n`;
+  text+=`Bankroll: €${s.bankroll.toFixed(2)} | Tournament ROI: ${s.pnl>=0?'+':''}${s.roi.toFixed(1)}%\n\n`;
+  text+=`*HIGH CONVICTION SINGLES*\n`;
+  t1.forEach((r,i)=>{text+=`${['1️⃣','2️⃣','3️⃣','4️⃣'][i]||'▫️'} ${r.match}\n   ${r.sel}\n   Odds: ${r.odds} | Stake: €${r.stake} | Audit: ${r.audit.score}/10\n\n`;});
+  text+=`*ACCUMULATOR OF THE DAY (${acc.type})*\n`;
+  accLegs.forEach(r=>{text+=`✓ ${r.match.split(' vs ')[0]} — ${r.sel} (${r.odds})\n`;});
+  text+=`Combined Odds: ${acc.combinedOdds} | Stake: €${acc.stake} | EV: ${acc.ev}\n\n`;
+  text+=`Today's Total Risk: €${totalStake}\n`;
+  text+=`Risk Level: Moderate\n`;
+  const ms=getCurrentMilestone(s.bankroll);if(ms)text+=`Current Goal: ${ms.desc}\n`;
+  text+=`\n_WC2026 Intel — Professional Trading Platform_`;
+  document.getElementById('wa-text').textContent=text;
+  document.getElementById('wa-ov').classList.add('open');
+}
+function copyWA(){
+  const t=document.getElementById('wa-text').textContent;
+  navigator.clipboard.writeText(t).then(()=>{const btn=event.target;const orig=btn.textContent;btn.textContent='✓ Copied!';setTimeout(()=>btn.textContent=orig,2000);}).catch(()=>{alert('Copy failed — please select and copy manually.');});
+}
+
+// ═══════════════════════════════════ NAV ═══════════════════════════════════
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));
+  const t=document.getElementById('tab-'+name);if(t)t.classList.add('active');
+  const names=['dashboard','markets','trades','live','control'];
+  const i=names.indexOf(name);
+  if(i>=0)document.querySelectorAll('#nav button')[i]?.classList.add('active');
+  if(name==='control')renderWhatsAppTab();
+  setTimeout(initCharts,80);
+}
+
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
+  const map={'1':'dashboard','2':'markets','3':'trades','4':'live','5':'control'};
+  if(map[e.key])switchTab(map[e.key]);
+  if(e.key==='Escape'){['ticket-ov','exec-ov','bet-ov','wa-ov','settle-ov'].forEach(id=>document.getElementById(id)?.classList.remove('open'));}
+});
+
+// ═══════════════════════════════════ INIT ═══════════════════════════════════
+function renderAll(){
+  updateHeader();renderAlerts();renderNews();renderFixtures();renderTourOdds();
+  renderFeeds();renderActionCenter();renderMilestones();renderAccumulators();
+  renderDailyCard();renderPositions();renderLedger();renderLiveCenter();
+  renderMatchBrowser();renderOutrights();
+  setTimeout(initCharts,100);
+}
+
+// ═══════════════════════════ AGENT IDENTITY ═══════════════════════════
+const AGENT_PERSONAS={
+  Atlas:{tone:'analytical',open:['Here\'s today\'s full breakdown.','Tournament update — disciplined as always.','Numbers in. Let\'s walk through it.']},
+  Scout:{tone:'observational',open:['Watched the football closely today.','The game told us a lot today.','Pitch intelligence update:']},
+  Kai:{tone:'sharp',open:['Quick one. Here\'s what mattered.','No fluff. Here\'s the card.','Day wrapped. The edge:']},
+  Finn:{tone:'friendly',open:['Alright, here\'s the update from today.','Good or bad, here\'s what happened.','Day done — let\'s go through it.']},
+  Nova:{tone:'precise',open:['Data settled. Here\'s the summary.','Model updated. Full read:','Tournament log — Day complete.']},
+};
+
+let selectedName=null;
+
+function initAgentIdentity(){
+  const saved=localStorage.getItem('wc2026_agent_name');
+  if(saved){STATE.agentName=saved;renderAgentIdentity();}
+  else{setTimeout(()=>document.getElementById('name-ov').classList.add('open'),800);}
+}
+
+function selectAgentName(name){
+  selectedName=name;
+  document.querySelectorAll('.name-opt').forEach(el=>{
+    el.style.borderColor=el.dataset.name===name?'var(--g)':'var(--b2)';
+    el.style.background=el.dataset.name===name?'rgba(0,217,126,.08)':'var(--bg3)';
+  });
+  document.getElementById('name-chosen').textContent=name;
+  document.getElementById('name-confirm').style.display='block';
+}
+
+function confirmAgentName(){
+  if(!selectedName)return;
+  STATE.agentName=selectedName;
+  localStorage.setItem('wc2026_agent_name',selectedName);
+  document.getElementById('name-ov').classList.remove('open');
+  renderAgentIdentity();generateNewsletterEntries();
+}
+
+function renderAgentIdentity(){
+  const name=STATE.agentName||'?';
+  const persona=AGENT_PERSONAS[name]||AGENT_PERSONAS.Atlas;
+  const el=document.getElementById('wa-identity-content');
+  const st=document.getElementById('wa-identity-status');
+  if(el){el.innerHTML=`
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px">
+      <div style="width:48px;height:48px;background:linear-gradient(135deg,var(--blue),var(--pur));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700">${name[0]}</div>
+      <div>
+        <div style="font-size:20px;font-weight:700">${name}</div>
+        <div style="font-size:11px;color:var(--t2);margin-top:2px">WC2026 Football Intelligence Agent · ${persona.tone} tone</div>
+        <div style="font-size:10px;color:var(--t3);margin-top:2px">All messages signed: — ${name}</div>
+      </div>
+      <button class="btn bo bsm" style="margin-left:auto" onclick="localStorage.removeItem('wc2026_agent_name');STATE.agentName=null;renderAgentIdentity();setTimeout(()=>document.getElementById('name-ov').classList.add('open'),200)">Change</button>
+    </div>
+    <div style="font-size:12px;color:var(--t2)">Identity locked for WC2026. Personality: <strong style="color:var(--t1)">${persona.tone}</strong>. Tone applied to all WhatsApp outputs.</div>`;}
+  if(st)st.textContent=name+' · Active';
+}
+
+// ═══════════════════════════ WHATSAPP MESSAGES ═══════════════════════════
+function generateDailyMessage(){
+  const s=calcStats();
+  const name=STATE.agentName||'Atlas';
+  const persona=AGENT_PERSONAS[name]||AGENT_PERSONAS.Atlas;
+  const today=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+  const sgn=s.pnl>=0?'+':'';
+  const opening=persona.open[Math.floor(Math.random()*persona.open.length)];
+  const won=s.won.length,lost=s.settled.length-won;
+  let msg=`📱 WHATSAPP — ${new Date().toISOString().split('T')[0]}\n\n`;
+  msg+=`${opening}\n\n`;
+  msg+=`*${today}*\n`;
+  msg+=`Bankroll: €${s.bankroll.toFixed(2)} | ROI: ${sgn}${s.roi.toFixed(1)}%\n`;
+  msg+=`Daily P&L: ${sgn}€${Math.abs(s.pnl).toFixed(2)}\n\n`;
+  if(s.settled.length===0){
+    msg+=`No settled positions yet — tournament starts 11 June.\n\n`;
+    msg+=`*Tomorrow's focus:*\n`;
+    RECS.filter(r=>r.tier===1).slice(0,2).forEach(r=>{msg+=`→ ${r.match} — ${r.sel} (${r.odds})\n`;});
+    msg+=`\nAll bets pass dual-agent review before I recommend them. No edge = no bet.\n`;
+  }else{
+    if(won>0)msg+=`*Wins (${won}):* `;
+    s.won.forEach(b=>{msg+=`${b.match} ✓ +€${(b.stake*b.odds-b.stake).toFixed(2)} | `;});
+    if(won>0)msg+='\n';
+    if(lost>0){msg+=`*Losses (${lost}):* `;const ls=s.settled.filter(x=>x.status==='lost');ls.forEach(b=>{msg+=`${b.match} ✗ -€${b.stake} | `;});msg+='\n';}
+    msg+=`\n*Model reflection:*\nI'll review what the data confirmed and what it missed. Model update incoming.\n\n`;
+    msg+=`*Tomorrow:*\n`;RECS.slice(0,2).forEach(r=>{msg+=`→ ${r.match} — ${r.sel}\n`;});
+  }
+  msg+=`\n— ${name}`;
+  addWAMessage(msg);
+}
+
+function generateCatchUp(){
+  const s=calcStats();
+  const name=STATE.agentName||'Atlas';
+  const days=STATE.missedDays||2;
+  let msg=`📱 WHATSAPP — ${new Date().toISOString().split('T')[0]} · CATCH-UP MODE\n\n`;
+  msg+=`Alright, here's everything you missed.\n\n`;
+  msg+=`*${days} days of tournament data:*\n`;
+  msg+=`Bankroll: €${s.bankroll.toFixed(2)}\n`;
+  msg+=`Net P&L this period: ${s.pnl>=0?'+':''}€${Math.abs(s.pnl).toFixed(2)}\n`;
+  msg+=`ROI: ${s.pnl>=0?'+':''}${s.roi.toFixed(1)}%\n`;
+  msg+=`Bets settled: ${s.settled.length} (${s.won.length}W / ${s.settled.length-s.won.length}L)\n\n`;
+  msg+=`*Key misses while you were away:*\n→ Norway qualification edge still active\n→ Senegal/Norway O2.5 moved favourably\n\n`;
+  msg+=`*Where we stand now:*\n${RECS.filter(r=>r.tier===1).slice(0,2).map(r=>`→ ${r.match} (${r.date}) — pending`).join('\n')}\n\n`;
+  msg+=`— ${name}`;
+  addWAMessage(msg);
+}
+
+function addWAMessage(msg){
+  const container=document.getElementById('wa-messages');if(!container)return;
+  const div=document.createElement('div');
+  div.style.cssText='background:var(--bg3);border:1px solid var(--b);border-radius:4px;padding:12px;margin:8px;';
+  div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:10px;color:var(--t3);font-family:var(--mono)">${new Date().toISOString().split('T')[0]}</div><button class="btn bo bsm" onclick="copyText(this.nextElementSibling.textContent)">Copy</button></div><pre style="font-size:12px;font-family:var(--mono);white-space:pre-wrap;color:var(--t1);line-height:1.7">${msg}</pre>`;
+  container.insertBefore(div,container.firstChild);
+}
+
+function copyText(txt){
+  navigator.clipboard.writeText(txt).then(()=>alert('Copied!')).catch(()=>alert('Select and copy manually.'));
+}
+
+// ═══════════════════════════ NEWSLETTER ═══════════════════════════
+const NEWSLETTER_ENTRIES=[
+  {date:'2026-06-04',entries:[
+    '🔴 INJURY: Lamine Yamal (Spain) — hamstring concern. Fitness uncertain for opener.',
+    '✅ CONFIRMED: Mbappé declared fit. France opener vs Iraq on June 17.',
+    '📊 ODDS: Spain drift 4.50→5.00 on Yamal news. France now co-favourite at 5.00.',
+    '⚽ FORM: Dembélé wins 2nd UCL title with PSG. Ballon d\'Or holder in peak form.',
+    '📈 SHARP: Senegal/Norway O2.5 line moving 1.95→1.90. Smart money involved.',
+    '🌍 FORMAT: 48 teams, 104 matches, 3 host nations. Largest World Cup in history.',
+    '🎯 RECORD: Haaland — 16 goals in 8 WC qualifiers. Norway avg 4.6 goals/match.',
+  ]},
+  {date:'2026-06-03',entries:[
+    '📋 SQUADS: All 48 nations confirm final 26-man rosters.',
+    '🇫🇷 FRANCE: Camavinga and Kolo Muani excluded. Cherki (Man City), Olise (Bayern) in.',
+    '🇧🇷 BRAZIL: Full squad healthy. Vinicius Jr + Rodrygo confirmed starters.',
+    '🇦🇷 ARGENTINA: Defending champions. Di María retirement after this tournament.',
+    '🏴󠁧󠁢󠁥󠁮󠁧󠁿 ENGLAND: Bellingham leads. Group L vs Croatia, Ghana, Panama.',
+    '🇩🇪 GERMANY: New generation. Florian Wirtz key creative engine.',
+  ]},
+];
+
+function generateNewsletterEntries(){
+  const el=document.getElementById('wa-newsletter');if(!el)return;
+  const name=STATE.agentName||'Atlas';
+  el.innerHTML=NEWSLETTER_ENTRIES.map(e=>`
+    <div style="border-bottom:1px solid var(--b);padding:10px 12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:10px;font-weight:700;color:var(--blt);font-family:var(--mono)">📅 WC2026 NEWS — ${e.date}</div>
+        <button class="btn bo bsm" onclick="copyNewsletterEntry('${e.date}')">Copy</button>
+      </div>
+      ${e.entries.map(n=>`<div style="font-size:12px;padding:3px 0;color:var(--t1)">${n}</div>`).join('')}
+      <div style="font-size:10px;color:var(--t3);margin-top:6px;font-family:var(--mono)">— ${name}</div>
+    </div>`).join('');
+}
+
+function copyNewsletterEntry(date){
+  const entry=NEWSLETTER_ENTRIES.find(e=>e.date===date);if(!entry)return;
+  const name=STATE.agentName||'Atlas';
+  const txt=`📅 WC2026 NEWS — ${date}\n\n${entry.entries.join('\n')}\n\n— ${name}`;
+  navigator.clipboard.writeText(txt).then(()=>alert('Newsletter copied!')).catch(()=>alert('Copy manually.'));
+}
+
+function generateNewsletterShare(){
+  const entry=NEWSLETTER_ENTRIES[0];const name=STATE.agentName||'Atlas';
+  document.getElementById('wa-text').textContent=`📅 WC2026 NEWS — ${entry.date}\n\n${entry.entries.join('\n')}\n\n— ${name}`;
+  document.getElementById('wa-ov').classList.add('open');
+}
+
+function generateRecapShare(){
+  const s=calcStats();const name=STATE.agentName||'Atlas';
+  const txt=`📊 WC2026 PERFORMANCE RECAP\n\nBankroll: €${s.bankroll.toFixed(2)}\nP&L: ${s.pnl>=0?'+':''}€${Math.abs(s.pnl).toFixed(2)} (${s.pnl>=0?'+':''}${s.roi.toFixed(1)}%)\nWin Rate: ${s.wr!==null?s.wr.toFixed(0)+'%':'—'}\nSettled: ${s.settled.length} bets\nOpen: ${s.open.length} positions\n\n— ${name}`;
+  document.getElementById('wa-text').textContent=txt;
+  document.getElementById('wa-ov').classList.add('open');
+}
+
+// ═══════════════════════════ TEAM ELO + VENUES ═══════════════════════════
+const TEAM_ELO={
+  'France':1980,'Brazil':1840,'Spain':1920,'England':1840,'Germany':1810,
+  'Argentina':1900,'Portugal':1820,'Netherlands':1770,'Belgium':1730,
+  'Norway':1700,'Croatia':1720,'Senegal':1665,'Morocco':1685,'Japan':1630,
+  'USA':1640,'Mexico':1680,'Canada':1660,'Australia':1600,'Poland':1625,
+  'Serbia':1680,'Iraq':1490,'S. Africa':1480,'Bosnia':1580,'Paraguay':1605,
+  'Ecuador':1645,'Uruguay':1715,'Colombia':1695,'Algeria':1665,'Cape Verde':1515,
+  'Curaçao':1445,'Cameroon':1560,'Netherlands':1770,
+};
+
+const VENUES={
+  'MetLife':{name:'MetLife Stadium',city:'New York, USA',alt:10,temp:27,outdoor:true},
+  'SoFi':{name:'SoFi Stadium',city:'Los Angeles, USA',alt:88,temp:26,outdoor:false},
+  'ATT':{name:'AT&T Stadium',city:'Dallas, USA',alt:183,temp:34,outdoor:false},
+  'Levis':{name:"Levi's Stadium",city:'San Francisco, USA',alt:2,temp:18,outdoor:true},
+  'Allegiant':{name:'Allegiant Stadium',city:'Las Vegas, USA',alt:610,temp:40,outdoor:false},
+  'Arrowhead':{name:'Arrowhead Stadium',city:'Kansas City, USA',alt:265,temp:30,outdoor:true},
+  'Empower':{name:'Empower Field',city:'Denver, USA',alt:1609,temp:22,outdoor:true},
+  'Gillette':{name:'Gillette Stadium',city:'Boston, USA',alt:12,temp:22,outdoor:true},
+  'Lincoln':{name:'Lincoln Financial',city:'Philadelphia, USA',alt:12,temp:28,outdoor:true},
+  'NRG':{name:'NRG Stadium',city:'Houston, USA',alt:15,temp:34,outdoor:false},
+  'HardRock':{name:'Hard Rock Stadium',city:'Miami, USA',alt:2,temp:32,outdoor:true},
+  'Azteca':{name:'Estadio Azteca',city:'Mexico City, MEX',alt:2240,temp:17,outdoor:true},
+  'Akron':{name:'Estadio Akron',city:'Guadalajara, MEX',alt:1528,temp:22,outdoor:true},
+  'BBVA':{name:'Estadio BBVA',city:'Monterrey, MEX',alt:537,temp:32,outdoor:true},
+  'BMO':{name:'BMO Field',city:'Toronto, CAN',alt:76,temp:23,outdoor:true},
+  'BC':{name:'BC Place',city:'Vancouver, CAN',alt:3,temp:18,outdoor:false},
+};
+
+const EUROPEAN_TEAMS=new Set(['France','Germany','Spain','Portugal','England','Netherlands','Belgium','Croatia','Denmark','Switzerland','Serbia','Norway','Poland','Bosnia']);
+const LATIN_TEAMS=new Set(['Brazil','Argentina','Mexico','Colombia','Uruguay','Ecuador','Paraguay','Chile']);
+
+function envFactor(team,venueKey){
+  const v=VENUES[venueKey];if(!v)return 0;
+  let adj=0;
+  const isEU=EUROPEAN_TEAMS.has(team),isLAT=LATIN_TEAMS.has(team);
+  // Altitude (only outdoor or very high altitude)
+  if(v.outdoor||v.alt>1200){
+    if(v.alt>2000){adj+=isLAT?0.01:isEU?-0.045:-0.02;}
+    else if(v.alt>1500){adj+=isLAT?0.005:isEU?-0.028:-0.012;}
+    else if(v.alt>800){adj+=isEU?-0.012:0;}
+  }
+  // Heat (outdoor only)
+  if(v.outdoor&&v.temp>30){
+    adj+=isEU?-(v.temp-30)*0.003:isLAT?(v.temp-28)*0.001:0;
+  }
+  return adj;
+}
+
+function envBadges(venueKey,home,away){
+  const v=VENUES[venueKey];if(!v)return '';
+  let badges='';
+  if(v.alt>2000)badges+=`<span class="env-badge env-alt">▲ ${v.alt}m altitude</span> `;
+  else if(v.alt>1500)badges+=`<span class="env-badge env-alt">▲ ${v.alt}m</span> `;
+  else if(v.alt>800)badges+=`<span class="env-badge env-alt">▲${v.alt}m</span> `;
+  if(v.outdoor&&v.temp>30)badges+=`<span class="env-badge env-heat">🌡 ${v.temp}°C</span> `;
+  if(!badges)badges=`<span class="env-badge env-ok">✓ Standard</span>`;
+  return badges;
+}
+
+// ═══════════════════════════ POISSON MARKET MODEL ═══════════════════════════
+function poissonP(lam,k){let p=Math.exp(-lam);for(let i=0;i<k;i++)p*=lam/(i+1);return p;}
+
+function calcMatchMarkets(fix){
+  const eH=(TEAM_ELO[fix.home]||1600)+(envFactor(fix.home,fix.venue)*400);
+  const eA=(TEAM_ELO[fix.away]||1600)+(envFactor(fix.away,fix.venue)*400);
+  const diff=eH-eA+60; // +60 = home advantage in ELO points
+  const xGH=Math.max(0.25,1.35+diff/650);
+  const xGA=Math.max(0.25,1.35-diff/650);
+  let pHW=0,pD=0,pAW=0;
+  let pU15=0,pU25=0,pU35=0;
+  for(let h=0;h<=9;h++)for(let a=0;a<=9;a++){
+    const p=poissonP(xGH,h)*poissonP(xGA,a);
+    if(h>a)pHW+=p;else if(h<a)pAW+=p;else pD+=p;
+    if(h+a<=1)pU15+=p;if(h+a<=2)pU25+=p;if(h+a<=3)pU35+=p;
+  }
+  const pHS=1-poissonP(xGH,0),pAS=1-poissonP(xGA,0);
+  const pBTTS=pHS*pAS;
+  const mg=0.93; // margin factor → fair odds
+  const o=(p)=>Math.round(1/(p*mg)*100)/100;
+  const ev=(mp,odds)=>((mp*odds-1)*100).toFixed(1);
+  return {
+    xGH:xGH.toFixed(1),xGA:xGA.toFixed(1),
+    markets:{
+      '1X2':[
+        {sel:fix.home+' Win',p:pHW,odds:o(pHW)},
+        {sel:'Draw',p:pD,odds:o(pD)},
+        {sel:fix.away+' Win',p:pAW,odds:o(pAW)},
+      ],
+      'Double Chance':[
+        {sel:fix.home+' / Draw',p:pHW+pD,odds:o(pHW+pD)},
+        {sel:fix.home+' / '+fix.away,p:pHW+pAW,odds:o(pHW+pAW)},
+        {sel:fix.away+' / Draw',p:pAW+pD,odds:o(pAW+pD)},
+      ],
+      'BTTS':[
+        {sel:'Both Score — Yes',p:pBTTS,odds:o(pBTTS)},
+        {sel:'Both Score — No',p:1-pBTTS,odds:o(1-pBTTS)},
+      ],
+      'O/U 1.5':[
+        {sel:'Under 1.5',p:pU15,odds:o(pU15)},
+        {sel:'Over 1.5',p:1-pU15,odds:o(1-pU15)},
+      ],
+      'O/U 2.5':[
+        {sel:'Under 2.5',p:pU25,odds:o(pU25)},
+        {sel:'Over 2.5',p:1-pU25,odds:o(1-pU25)},
+      ],
+      'O/U 3.5':[
+        {sel:'Under 3.5',p:pU35,odds:o(pU35)},
+        {sel:'Over 3.5',p:1-pU35,odds:o(1-pU35)},
+      ],
+      'AH −0.5':[
+        {sel:fix.home+' −0.5',p:pHW,odds:Math.round(1/(pHW*0.945)*100)/100},
+        {sel:fix.away+' +0.5',p:pD+pAW,odds:Math.round(1/((pD+pAW)*0.945)*100)/100},
+      ],
+    }
+  };
+}
+
+// ═══════════════════════════ MATCH BROWSER ═══════════════════════════
+let openMatchId=null,openMarketType=null;
+
+function renderMatchBrowser(){
+  const el=document.getElementById('match-browser');if(!el)return;
+  el.innerHTML=FIXTURES.map((fix,i)=>{
+    const v=VENUES[fix.venue]||{};
+    const envH=envFactor(fix.home,fix.venue),envA=envFactor(fix.away,fix.venue);
+    const envNote=envH!==0||envA!==0?`<span style="color:var(--gold);font-size:10px">⚡ Env adj: ${fix.home} ${(envH*100).toFixed(1)}% / ${fix.away} ${(envA*100).toFixed(1)}%</span>`:'';
+    const st=getFixtureStatus(fix);
+    const lockBadge=st.locked
+      ?`<span style="font-family:var(--mono);font-size:9px;background:var(--r);color:#fff;padding:1px 5px;border-radius:3px;margin-left:4px">LOCKED</span>`
+      :`<span style="font-family:var(--mono);font-size:9px;color:${st.color};margin-left:4px">⏱ ${fix.ko?fix.ko+' UTC':''}${st.label?' · '+st.label:''}</span>`;
+    return `<div class="mb-match" id="mbm-${i}" ${st.locked?'style="opacity:.6"':''}>
+      <div class="mb-match-hdr" onclick="toggleMatchMarket(${i})">
+        <div style="min-width:55px;font-size:9px;color:var(--t3);font-family:var(--mono)">${fix.date}${lockBadge}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">${fix.home} <span style="color:var(--t3);font-weight:400">vs</span> ${fix.away}</div>
+          <div style="display:flex;gap:5px;margin-top:3px;align-items:center">
+            <span style="font-size:10px;color:var(--t3)">Gr.${fix.group} · ${v.city||fix.venue}</span>
+            ${envBadges(fix.venue,fix.home,fix.away)}
+            ${envNote}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;font-family:var(--mono)">
+          <div style="text-align:center;background:var(--bg3);border:1px solid var(--b);border-radius:3px;padding:3px 8px;min-width:42px"><div style="font-size:9px;color:var(--t3)">1</div><div class="gold" style="font-size:12px;font-weight:700">${fix.h}</div></div>
+          <div style="text-align:center;background:var(--bg3);border:1px solid var(--b);border-radius:3px;padding:3px 8px;min-width:42px"><div style="font-size:9px;color:var(--t3)">X</div><div style="color:var(--t2);font-size:12px;font-weight:700">${fix.d}</div></div>
+          <div style="text-align:center;background:var(--bg3);border:1px solid var(--b);border-radius:3px;padding:3px 8px;min-width:42px"><div style="font-size:9px;color:var(--t3)">2</div><div class="gold" style="font-size:12px;font-weight:700">${fix.a}</div></div>
+        </div>
+        <div style="font-size:18px;color:var(--t3);transition:transform .2s" id="mbm-arrow-${i}">›</div>
+      </div>
+      <div class="mb-markets" id="mbm-body-${i}">
+        <div style="font-size:9px;color:var(--t3);margin-bottom:6px;font-family:var(--mono)">
+          Model xG: ${fix.home} <span style="color:var(--g)">${calcMatchMarkets(fix).xGH}</span> · ${fix.away} <span style="color:var(--r)">${calcMatchMarkets(fix).xGA}</span>
+          &nbsp;·&nbsp; ${v.alt>1500?`<span style="color:var(--pur)">⚠ High altitude (${v.alt}m) — model adjusted</span>`:''}
+          ${v.outdoor&&v.temp>30?`<span style="color:var(--r)">⚠ Heat (${v.temp}°C) — model adjusted</span>`:''}
+        </div>
+        <div class="mk-type-row" id="mkt-types-${i}">
+          ${['1X2','Double Chance','BTTS','O/U 1.5','O/U 2.5','O/U 3.5','AH −0.5'].map(m=>
+            `<button class="mk-type-btn" onclick="showMarket(${i},'${m}',this)">${m}</button>`
+          ).join('')}
+        </div>
+        <div class="mk-options" id="mkt-opts-${i}"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleMatchMarket(i){
+  const body=document.getElementById(`mbm-body-${i}`);
+  const arrow=document.getElementById(`mbm-arrow-${i}`);
+  const isOpen=body.classList.contains('open');
+  // Close all others
+  document.querySelectorAll('.mb-markets.open').forEach(el=>el.classList.remove('open'));
+  document.querySelectorAll('[id^="mbm-arrow-"]').forEach(a=>a.style.transform='rotate(0deg)');
+  if(!isOpen){
+    body.classList.add('open');
+    arrow.style.transform='rotate(90deg)';
+    // Auto-open 1X2
+    showMarket(i,'1X2',document.querySelector(`#mkt-types-${i} .mk-type-btn`));
+  }
+}
+
+function showMarket(fixIdx,mktType,btn){
+  // Toggle active btn
+  document.querySelectorAll(`#mkt-types-${fixIdx} .mk-type-btn`).forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  const fix=FIXTURES[fixIdx];
+  const st=getFixtureStatus(fix);
+  const mkt=calcMatchMarkets(fix).markets[mktType];
+  if(!mkt)return;
+  const el=document.getElementById(`mkt-opts-${fixIdx}`);
+  el.classList.add('show');
+  if(st.locked){
+    el.innerHTML=`<div style="padding:10px;font-size:11px;color:var(--r);font-family:var(--mono);text-align:center">🔒 BETTING CLOSED — Match in progress or completed</div>`;
+    return;
+  }
+  // For EV: compare model p vs fair odds (market baseline is the displayed odds if available)
+  const xg=calcMatchMarkets(fix);
+  el.innerHTML=mkt.map(opt=>{
+    const modelEv=((opt.p*opt.odds-1)*100);
+    const hasEv=modelEv>=3;
+    const evColor=modelEv>=8?'var(--g)':modelEv>=3?'var(--gold)':'var(--t3)';
+    const basketId=`${fix.home}_${fix.away}_${mktType}_${opt.sel}`.replace(/\s+/g,'_');
+    return `<div class="mk-opt${hasEv?' has-ev':''}" onclick="addToBasket({id:'${basketId}',match:'${fix.home} vs ${fix.away}',sel:'${opt.sel}',market:'${mktType}',odds:${opt.odds},modelP:${Math.round(opt.p*100)},stake:10,date:'${fix.date}',conf:${hasEv?7.5:6.0},rationale:'Poisson model — xG ${xg.xGH}/${xg.xGA}. ${envFactor(fix.home,fix.venue)!==0?'Env-adjusted.':''}',risk:'${hasEv?'Low':'Moderate'}'})">
+      <span class="mo-sel">${opt.sel}</span>
+      <div style="text-align:right">
+        <div class="mo-odds">${opt.odds}</div>
+        <div class="mo-ev" style="color:${evColor}">${modelEv>=0?'+':''}${modelEv.toFixed(1)}% EV</div>
+      </div>
+      <div style="font-size:9px;color:var(--t3);white-space:nowrap;margin-left:2px">+ Basket</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════ TOURNAMENT OUTRIGHTS ═══════════════════════════
+const OUTRIGHT_MARKETS=[
+  {category:'Group Winners',items:[
+    {team:'France',group:'I',sel:'France — Win Group I',odds:1.55,modelP:72,ev:'+5.4%',conf:8.1,market:'Group Winner'},
+    {team:'Spain',group:'H',sel:'Spain — Win Group H',odds:1.45,modelP:76,ev:'+10.2%',conf:8.5,market:'Group Winner'},
+    {team:'Brazil',group:'C',sel:'Brazil — Win Group C',odds:1.70,modelP:67,ev:'+8.9%',conf:7.9,market:'Group Winner'},
+    {team:'Argentina',group:'J',sel:'Argentina — Win Group J',odds:1.55,modelP:73,ev:'+6.2%',conf:8.2,market:'Group Winner'},
+    {team:'Germany',group:'E',sel:'Germany — Win Group E',odds:1.40,modelP:79,ev:'+10.6%',conf:8.7,market:'Group Winner'},
+    {team:'England',group:'G',sel:'England — Win Group G',odds:1.50,modelP:76,ev:'+14.0%',conf:8.3,market:'Group Winner'},
+    {team:'Portugal',group:'B',sel:'Portugal — Win Group B',odds:1.65,modelP:69,ev:'+13.9%',conf:8.0,market:'Group Winner'},
+    {team:'Netherlands',group:'D',sel:'Netherlands — Win Group D',odds:1.75,modelP:65,ev:'+13.75%',conf:7.8,market:'Group Winner'},
+  ]},
+  {category:'Qualify from Group (Top 2)',items:[
+    {team:'France',group:'I',sel:'France — Qualify Top 2',odds:1.06,modelP:97,ev:'+2.8%',conf:9.5,market:'Qualification',note:'Near certainty'},
+    {team:'Norway',group:'I',sel:'Norway — Qualify Top 2',odds:1.40,modelP:77,ev:'+7.8%',conf:9.0,market:'Qualification'},
+    {team:'Senegal',group:'I',sel:'Senegal — Qualify Top 2',odds:1.65,modelP:65,ev:'+7.3%',conf:7.5,market:'Qualification'},
+    {team:'Brazil',group:'C',sel:'Brazil — Qualify Top 2',odds:1.12,modelP:94,ev:'+5.3%',conf:9.2,market:'Qualification'},
+    {team:'Spain',group:'H',sel:'Spain — Qualify Top 2',odds:1.08,modelP:96,ev:'+3.7%',conf:9.4,market:'Qualification'},
+    {team:'Germany',group:'E',sel:'Germany — Qualify Top 2',odds:1.10,modelP:95,ev:'+4.5%',conf:9.3,market:'Qualification'},
+    {team:'Morocco',group:'C',sel:'Morocco — Qualify Top 2',odds:2.20,modelP:52,ev:'+14.4%',conf:7.2,market:'Qualification'},
+    {team:'Japan',group:'F',sel:'Japan — Qualify Top 2',odds:2.40,modelP:48,ev:'+15.2%',conf:7.0,market:'Qualification'},
+    {team:'Croatia',group:'F',sel:'Croatia — Qualify Top 2',odds:1.70,modelP:64,ev:'+8.8%',conf:7.8,market:'Qualification'},
+    {team:'Portugal',group:'B',sel:'Portugal — Qualify Top 2',odds:1.20,modelP:91,ev:'+9.2%',conf:9.1,market:'Qualification'},
+  ]},
+  {category:'Reach Quarter Finals',items:[
+    {team:'France',sel:'France — Reach QF',odds:2.20,modelP:54,ev:'+18.8%',conf:7.8,market:'Tournament Progression'},
+    {team:'Spain',sel:'Spain — Reach QF',odds:1.90,modelP:60,ev:'+14.0%',conf:8.0,market:'Tournament Progression'},
+    {team:'Brazil',sel:'Brazil — Reach QF',odds:2.40,modelP:50,ev:'+20.0%',conf:7.5,market:'Tournament Progression'},
+    {team:'Germany',sel:'Germany — Reach QF',odds:2.60,modelP:46,ev:'+19.6%',conf:7.4,market:'Tournament Progression'},
+    {team:'England',sel:'England — Reach QF',odds:2.80,modelP:44,ev:'+23.2%',conf:7.2,market:'Tournament Progression'},
+    {team:'Norway',sel:'Norway — Reach QF',odds:6.00,modelP:21,ev:'+26.0%',conf:7.0,market:'Tournament Progression'},
+    {team:'Morocco',sel:'Morocco — Reach QF',odds:5.50,modelP:23,ev:'+26.5%',conf:7.1,market:'Tournament Progression'},
+    {team:'Japan',sel:'Japan — Reach QF',odds:7.00,modelP:18,ev:'+26.0%',conf:6.9,market:'Tournament Progression'},
+  ]},
+  {category:'Reach Semi Finals',items:[
+    {team:'France',sel:'France — Reach SF',odds:3.50,modelP:36,ev:'+26.0%',conf:7.5,market:'Tournament Progression'},
+    {team:'Spain',sel:'Spain — Reach SF',odds:3.20,modelP:40,ev:'+28.0%',conf:7.6,market:'Tournament Progression'},
+    {team:'Brazil',sel:'Brazil — Reach SF',odds:4.00,modelP:33,ev:'+32.0%',conf:7.3,market:'Tournament Progression'},
+    {team:'Argentina',sel:'Argentina — Reach SF',odds:3.80,modelP:35,ev:'+33.0%',conf:7.4,market:'Tournament Progression'},
+    {team:'England',sel:'England — Reach SF',odds:4.50,modelP:30,ev:'+35.0%',conf:7.2,market:'Tournament Progression'},
+  ]},
+  {category:'Tournament Winner',items:[
+    {team:'Spain',sel:'Spain — Win WC2026',odds:4.50,modelP:25,ev:'+12.5%',conf:7.0,market:'Tournament Winner'},
+    {team:'France',sel:'France — Win WC2026',odds:5.00,modelP:22,ev:'+10.0%',conf:6.9,market:'Tournament Winner'},
+    {team:'Brazil',sel:'Brazil — Win WC2026',odds:7.50,modelP:16,ev:'+20.0%',conf:7.2,market:'Tournament Winner'},
+    {team:'England',sel:'England — Win WC2026',odds:8.00,modelP:15,ev:'+20.0%',conf:6.8,market:'Tournament Winner'},
+    {team:'Argentina',sel:'Argentina — Win WC2026',odds:9.00,modelP:14,ev:'+26.0%',conf:7.1,market:'Tournament Winner'},
+    {team:'Germany',sel:'Germany — Win WC2026',odds:10.00,modelP:13,ev:'+30.0%',conf:7.0,market:'Tournament Winner'},
+    {team:'Norway',sel:'Norway — Win WC2026',odds:28.00,modelP:5,ev:'+40.0%',conf:6.5,market:'Tournament Winner'},
+    {team:'Portugal',sel:'Portugal — Win WC2026',odds:12.00,modelP:10,ev:'+20.0%',conf:6.8,market:'Tournament Winner'},
+  ]},
+];
+
+let currentOutrightFilter='all';
+function filterOutrights(cat,btn){
+  currentOutrightFilter=cat;
+  document.querySelectorAll('[id^="otr-btn"]').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.mk-type-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  renderOutrights();
+}
+
+function renderOutrights(){
+  const el=document.getElementById('outrights-grid');if(!el)return;
+  const cats=currentOutrightFilter==='all'?OUTRIGHT_MARKETS:OUTRIGHT_MARKETS.filter(c=>c.category===currentOutrightFilter);
+  el.innerHTML=cats.map(cat=>`
+    <div style="margin-bottom:12px">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--t3);font-weight:700;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--b)">${cat.category}</div>
+      <div class="otr-grid">
+        ${cat.items.map(item=>{
+          const evNum=parseFloat(item.ev);
+          const evColor=evNum>=15?'var(--g)':evNum>=8?'var(--gold)':'var(--t3)';
+          const confColor=item.conf>=8.5?'var(--g)':item.conf>=7.5?'var(--gold)':'var(--t2)';
+          const inBasket=BASKET.some(b=>b.id==='otr_'+item.team+'_'+cat.category.replace(/\s+/g,'_'));
+          const basketId='otr_'+item.team+'_'+cat.category.replace(/\s+/g,'_');
+          return `<div class="otr-item${inBasket?' has-ev':''}" onclick="addToBasket({id:'${basketId}',match:'${item.sel}',sel:'${item.sel}',market:'${item.market}',odds:${item.odds},modelP:${item.modelP},stake:10,date:'Jun 2026',conf:${item.conf},risk:'Low',rationale:'Tournament outright — ELO-based probability model.'})">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:11px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.sel}</div>
+              <div style="display:flex;gap:6px;margin-top:3px;align-items:center">
+                <span style="font-size:10px;color:var(--t3)">Model ${item.modelP}%</span>
+                ${item.note?`<span style="font-size:9px;color:var(--t3)">${item.note}</span>`:''}
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div class="gold mono" style="font-weight:700">${item.odds}</div>
+              <div style="font-size:9px;color:${evColor};font-family:var(--mono)">${item.ev}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════ BASKET ═══════════════════════════
+let BASKET=[],basketTab='simple';
+
+function addToBasket(item){
+  if(BASKET.find(b=>b.id===item.id)){showToast('Already in basket');return;}
+  BASKET.push({...item,stake:item.stake||10});
+  updateBasketBadge();
+  renderBasket();
+  if(!document.getElementById('basket-drawer').classList.contains('open'))toggleBasket();
+  showToast('Added to basket');
+}
+
+function removeFromBasket(id){
+  BASKET=BASKET.filter(b=>b.id!==id);
+  updateBasketBadge();renderBasket();renderOutrights();
+}
+
+function updateBasketBadge(){
+  const badge=document.getElementById('basket-badge');
+  const btn=document.getElementById('basket-btn');
+  badge.textContent=BASKET.length;
+  if(BASKET.length>0){badge.classList.add('show');btn.classList.add('has-items');}
+  else{badge.classList.remove('show');btn.classList.remove('has-items');}
+  document.getElementById('bk-count-label').textContent=BASKET.length+' selection'+(BASKET.length!==1?'s':'');
+}
+
+function toggleBasket(){
+  const d=document.getElementById('basket-drawer'),o=document.getElementById('basket-overlay');
+  d.classList.toggle('open');o.classList.toggle('open');
+  if(d.classList.contains('open'))renderBasket();
+}
+
+function switchBasketTab(tab){
+  basketTab=tab;
+  document.getElementById('bk-tab-simple').classList.toggle('active',tab==='simple');
+  document.getElementById('bk-tab-combi').classList.toggle('active',tab==='combi');
+  renderBasket();
+}
+
+function renderBasket(){
+  const el=document.getElementById('bk-items');
+  const btn=document.getElementById('bk-place-btn');
+  const summary=document.getElementById('bk-summary');
+  if(!el)return;
+
+  if(BASKET.length===0){
+    el.innerHTML=`<div style="padding:30px 16px;text-align:center;color:var(--t3)">
+      <div style="font-size:36px;margin-bottom:10px">🛒</div>
+      <div style="font-size:12px;line-height:1.6">Your basket is empty.<br>Click any odds in the Markets tab<br>to add a selection.</div>
+    </div>`;
+    summary.innerHTML='';btn.disabled=true;btn.textContent='Add selections first';
+    return;
+  }
+
+  if(basketTab==='simple'){
+    let totalStake=0;
+    el.innerHTML=BASKET.map(b=>{
+      totalStake+=b.stake;
+      const profit=(b.stake*b.odds-b.stake).toFixed(2);
+      return `<div class="bk-item">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;color:var(--t3);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.match}</div>
+          <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.sel}</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="chip cgold" style="font-size:11px">${b.odds}</span>
+            <span style="font-size:10px;color:var(--t3)">${b.market||'Match Bet'}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:7px">
+            <span style="font-size:10px;color:var(--t3)">Stake €</span>
+            <input class="bk-stake-in" type="number" value="${b.stake}" min="1" max="500"
+              oninput="updateBasketStake('${b.id}',this.value)">
+            <span style="font-size:10px;font-family:var(--mono);color:var(--g)">→ €${(parseFloat(b.stake)*b.odds).toFixed(2)}</span>
+          </div>
+        </div>
+        <button class="bk-remove" onclick="removeFromBasket('${b.id}')">×</button>
+      </div>`;
+    }).join('');
+
+    const totalReturn=BASKET.reduce((s,b)=>s+b.stake*b.odds,0);
+    summary.innerHTML=`<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="color:var(--t3)">Total stake</span><span class="gold mono">€${totalStake.toFixed(0)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--t3)">Combined max return</span><span class="pos mono">€${totalReturn.toFixed(2)}</span></div>`;
+    btn.disabled=false;
+    btn.textContent=`Log ${BASKET.length} bet${BASKET.length>1?'s':''} — €${totalStake.toFixed(0)}`;
+
+  } else {
+    const combinedOdds=BASKET.reduce((p,b)=>p*b.odds,1);
+    let combiStake=BASKET[0]?.stake||10;
+    el.innerHTML=`<div style="padding:10px 12px">
+      <div style="background:rgba(245,166,35,.07);border:1px solid rgba(245,166,35,.2);border-radius:4px;padding:10px;margin-bottom:10px">
+        <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Combiné — ${BASKET.length} Legs</div>
+        ${BASKET.map(b=>`<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid rgba(26,37,64,.4);font-size:11px">
+          <span style="color:var(--g);font-weight:700">✓</span>
+          <span style="flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.sel}</span>
+          <span class="gold mono" style="flex-shrink:0">${b.odds}</span>
+          <button style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:15px;line-height:1;padding:0;flex-shrink:0" onclick="removeFromBasket('${b.id}')">×</button>
+        </div>`).join('')}
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--b);border-radius:4px;padding:10px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:10px;color:var(--t3)">Combined Odds</span>
+          <span class="gold mono" style="font-size:22px;font-weight:700">${combinedOdds.toFixed(2)}</span>
+        </div>
+        <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px">Stake €</div>
+        <input class="bk-stake-in" type="number" value="${combiStake}" min="1" max="100"
+          style="width:100%;font-size:18px;padding:8px 10px;text-align:center"
+          oninput="updateCombiStake(this.value)">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:8px">
+          <span style="color:var(--t3)">Potential return</span>
+          <span class="pos mono" id="bk-combi-return">€${(combiStake*combinedOdds).toFixed(2)}</span>
+        </div>
+      </div>
+    </div>`;
+    summary.innerHTML=`<div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--t3)">Combined odds</span><span class="gold mono">${combinedOdds.toFixed(2)}</span></div>`;
+    btn.disabled=BASKET.length<2;
+    btn.textContent=BASKET.length<2?'Need ≥2 selections for Combiné':`Log Combiné — €${combiStake} × ${combinedOdds.toFixed(2)}`;
+  }
+}
+
+function updateBasketStake(id,val){
+  const b=BASKET.find(b=>b.id===id);if(b)b.stake=parseFloat(val)||0;
+  const total=BASKET.reduce((s,b)=>s+(parseFloat(b.stake)||0),0);
+  document.getElementById('bk-place-btn').textContent=`Log ${BASKET.length} bet${BASKET.length>1?'s':''} — €${total.toFixed(0)}`;
+}
+
+function updateCombiStake(val){
+  const s=parseFloat(val)||0;
+  BASKET.forEach(b=>b.stake=s);
+  const odds=BASKET.reduce((p,b)=>p*b.odds,1);
+  const el=document.getElementById('bk-combi-return');if(el)el.textContent='€'+(s*odds).toFixed(2);
+  document.getElementById('bk-place-btn').textContent=`Log Combiné — €${s} × ${odds.toFixed(2)}`;
+}
+
+async function placeBasket(){
+  if(!BASKET.length)return;
+
+  // ── Daily exposure cap check ──
+  const s=calcStats();
+  const totalNewStake=BASKET.reduce((t,b)=>t+(parseFloat(b.stake)||0),0);
+  const dailyBets=STATE.bets.filter(b=>{
+    const today=new Date().toISOString().split('T')[0];
+    return b.status==='pending'&&(b.createdAt||'').startsWith(today);
+  });
+  const dailyExposure=dailyBets.reduce((t,b)=>t+b.stake,0);
+  const dailyCap=s.bankroll*0.20; // 20% of bankroll max daily exposure
+  if(dailyExposure+totalNewStake>dailyCap*1.5){
+    showToast(`⚠ Daily cap: only €${(dailyCap-dailyExposure).toFixed(0)} remaining today`);
+    return;
+  }
+
+  const prevBal=s.bankroll;
+  const betObjects=[];
+
+  if(basketTab==='simple'){
+    for(const b of BASKET){
+      const betObj={
+        id:'b'+Date.now()+Math.random().toString(36).slice(2,6),
+        match:b.match, date:b.date||new Date().toISOString().split('T')[0],
+        market:b.market||'Manual', selection:b.sel,
+        recOdds:b.odds, odds:b.odds, recStake:b.stake, stake:parseFloat(b.stake)||0,
+        confidence:b.conf||7, risk:b.risk||'Moderate',
+        reason:b.rationale||'Basket bet', status:'pending',
+        closingOdds:null, isAccumulator:false,
+        recId:b.id||null, createdAt:new Date().toISOString()
+      };
+      betObjects.push(betObj);
+    }
+  } else {
+    const cOdds=parseFloat(BASKET.reduce((p,b)=>p*b.odds,1).toFixed(2));
+    const stake=parseFloat(BASKET[0]?.stake)||10;
+    betObjects.push({
+      id:'b'+Date.now(),
+      match:'Combiné ('+BASKET.length+' legs)',
+      date:new Date().toISOString().split('T')[0],
+      market:'Accumulator',
+      selection:BASKET.map(b=>b.sel).join(' + '),
+      recOdds:cOdds, odds:cOdds, recStake:stake, stake,
+      confidence:7, risk:'Moderate', reason:'Basket combiné',
+      status:'pending', closingOdds:null, isAccumulator:true,
+      createdAt:new Date().toISOString()
+    });
+  }
+
+  // ── OPTIMISTIC UPDATE: push to local state immediately ──
+  betObjects.forEach(b=>STATE.bets.push(b));
+  updatePeakBankroll();
+  saveState();
+  render(); // balance deducts right now via calcStats()
+  animateBalance(prevBal, prevBal-totalNewStake, 'down');
+  showToast(`✓ ${betObjects.length} bet${betObjects.length>1?'s':''} logged — balance updated`);
+  BASKET=[];
+  updateBasketBadge();
+  toggleBasket();
+  switchTab('trades'); // Jump to Trades tab so user sees their open positions
+
+  // ── BACKGROUND SYNC to Railway API ──
+  if(API_BASE){
+    for(const betObj of betObjects){
+      try{
+        const created=await apiFetch('/api/bets',{method:'POST',body:JSON.stringify({
+          match:betObj.match, date:betObj.date, market:betObj.market,
+          selection:betObj.selection, rec_odds:betObj.recOdds, actual_odds:betObj.odds,
+          rec_stake:betObj.recStake, actual_stake:betObj.stake,
+          confidence:betObj.confidence, risk:betObj.risk, reasoning:betObj.reason,
+          is_accumulator:betObj.isAccumulator, rec_id:betObj.recId||null
+        })});
+        // Replace temp ID with server ID if available
+        if(created?.id){
+          const local=STATE.bets.find(b=>b.id===betObj.id);
+          if(local)local.serverId=created.id;
+        }
+      }catch(e){console.warn('API sync failed for bet, kept in local state',betObj.id);}
+    }
+    // Quiet re-sync (don't re-render — local state already correct)
+    try{const bets=await apiFetch('/api/bets');STATE.bets=bets.map(normalizeBet);saveState();renderPositions();renderLedger();}catch(e){}
+  }
+}
+
+// Track peak bankroll for drawdown multiplier
+function updatePeakBankroll(){
+  const s=calcStats();
+  if(!STATE.bankroll.peak||s.bankroll>STATE.bankroll.peak){
+    STATE.bankroll.peak=s.bankroll;
+  }
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');if(!t)return;
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(t._to);t._to=setTimeout(()=>t.style.opacity='0',2400);
+}
+
+// ═══════════════════════════ LEARNING LOG ═══════════════════════════
+function updateLearningLog(){
+  const el=document.getElementById('wa-learning-log');if(!el)return;
+  const s=calcStats();
+  if(!s.settled.length){el.innerHTML='<div style="color:var(--t3);font-size:11px">No settled bets yet. Learning log activates after first match result.</div>';return;}
+  const logs=STATE.learningLog||[];
+  if(!logs.length)el.innerHTML='<div style="color:var(--t3);font-size:11px">Settle positions to trigger model self-reflection.</div>';
+  else el.innerHTML=logs.map(l=>`<div style="padding:6px 0;border-bottom:1px solid rgba(26,37,64,.3);font-size:11px"><div style="color:var(--gold);font-family:var(--mono);margin-bottom:2px">${l.date||''}</div><div style="color:var(--t2)">${l.reflection||''}</div></div>`).join('');
+}
+
+// INIT
+function render(){updateHeader();renderPositions();renderLedger();renderMilestones();updateLearningLog();}
+
+window.onload=function(){
+  loadState();
+  updatePeakBankroll();
+  startClock();
+  renderAll();
+  initAgentIdentity();
+  initAPI();
+  updateBasketBadge();
+};
+</script>
+</body>
+</html>
