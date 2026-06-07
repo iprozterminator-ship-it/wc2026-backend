@@ -279,3 +279,7 @@ class DataFetcher:
             {"title":"Sadio Mane: This World Cup is Senegal's best chance in history","impact":"medium","category":"FORM","published_at":"2026-06-03T11:00:00Z","source":"RFI"},
             {"title":"USA co-host advantage: players familiar with stadiums, crowd support key","impact":"low","category":"FORM","published_at":"2026-06-01T14:00:00Z","source":"ESPN"},
         ]
+
+
+# Singleton
+fetcher = DataFetcher()
