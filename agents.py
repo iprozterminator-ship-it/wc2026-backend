@@ -11,7 +11,7 @@ import os, json
 from datetime import datetime
 from anthropic import AsyncAnthropic
 
-client = AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+client = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
 MODEL  = "claude-opus-4-6"   # Use claude-haiku-4-5-20251001 to reduce costs
 
 # ──────────────────────────────────────────────────────────────

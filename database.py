@@ -114,6 +114,16 @@ class Database:
         self._local["bets"] = [b for b in self._local["bets"] if b["id"] != bet_id]
         self._save_local()
 
+    async def reset_bets(self, starting_bankroll: float = 500.0):
+        """Wipe all bets and reset bankroll. Keeps recs, odds, matches, news, config."""
+        if self.supabase:
+            self.supabase.table("bets").delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
+            self.supabase.table("learning_log").delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
+        self._local["bets"] = []
+        self._local["learning_log"] = []
+        self._save_local()
+        await self.set_config("starting_bankroll", starting_bankroll)
+
     # ─────────────────────────────────────────────────────
     # RECOMMENDATIONS
     # ─────────────────────────────────────────────────────
@@ -174,8 +184,9 @@ class Database:
         self._local.setdefault("config", {})[key] = value
         self._save_local()
 
+
     # ─────────────────────────────────────────────────────
-    # CACHE (live data — not persisted)
+    # CACHE (live data — stored in memory only)
     # ─────────────────────────────────────────────────────
 
     _cache: dict = {}
@@ -185,6 +196,20 @@ class Database:
 
     async def set_cache(self, key: str, value):
         self._cache[key] = value
+
+    # ─────────────────────────────────────────────────────
+    # RESET
+    # ─────────────────────────────────────────────────────
+
+    async def reset_bets(self, starting_bankroll: float = 500.0):
+        """Wipe all bets and reset bankroll. Keeps recs, odds, matches, news, config."""
+        if self.supabase:
+            self.supabase.table("bets").delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
+            self.supabase.table("learning_log").delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
+        self._local["bets"] = []
+        self._local["learning_log"] = []
+        self._save_local()
+        await self.set_config("starting_bankroll", starting_bankroll)
 
 
 # Singleton
