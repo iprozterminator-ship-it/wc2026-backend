@@ -25,18 +25,15 @@ from scheduler import start_scheduler, scheduler
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Start background scheduler on boot, stop on shutdown."""
-    print("🚀 WC2026 Agent starting...")
+    print("WC2026 Agent starting...")
     await db.init()
-    # Pre-populate cache on startup so dashboard has data immediately
     asyncio.create_task(_startup_cache())
     start_scheduler()
     yield
     scheduler.shutdown()
-    print("🛑 WC2026 Agent stopped.")
+    print("WC2026 Agent stopped.")
 
 async def _startup_cache():
-    """Populate matches/odds/news cache on startup using fallbacks if needed."""
     try:
         matches = await fetcher.get_wc_matches()
         odds    = await fetcher.get_live_odds()
@@ -44,13 +41,12 @@ async def _startup_cache():
         if matches: await db.set_cache("matches", matches)
         if odds:    await db.set_cache("odds", odds)
         if news:    await db.set_cache("news", news)
-        print(f"✅ Startup cache: {len(matches)} matches, {len(odds)} odds, {len(news)} news")
+        print(f"Startup cache: {len(matches)} matches, {len(odds)} odds, {len(news)} news")
     except Exception as e:
-        print(f"⚠️ Startup cache failed: {e}")
+        print(f"Startup cache failed: {e}")
 
 app = FastAPI(title="WC2026 Trading Terminal API", version="1.0.0", lifespan=lifespan)
 
-# Allow your frontend (any origin for now — restrict in production)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -58,11 +54,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Active WebSocket connections (for live push)
 active_connections: list[WebSocket] = []
 
 async def broadcast(data: dict):
-    """Push data to all connected dashboard clients."""
     msg = json.dumps(data)
     for ws in active_connections[:]:
         try:
@@ -90,7 +84,7 @@ class BetCreate(BaseModel):
     rec_id: Optional[str] = None
 
 class BetSettle(BaseModel):
-    status: str          # "won" | "lost" | "void"
+    status: str
     closing_odds: Optional[float] = None
 
 class BetUpdate(BaseModel):
@@ -119,16 +113,16 @@ async def get_portfolio():
     try:
         bets = await db.get_bets()
     except Exception as e:
-        print(f"⚠️ get_bets error: {e}")
+        print(f"get_bets error: {e}")
         bets = []
     try:
-        cfg  = await db.get_config()
+        cfg = await db.get_config()
     except Exception as e:
-        print(f"⚠️ get_config error: {e}")
+        print(f"get_config error: {e}")
         cfg = {}
     starting = float(cfg.get("starting_bankroll", 500.0))
 
-    settled = [b for b in bets if b["status"] in ("won", "lost")]
+    settled   = [b for b in bets if b["status"] in ("won", "lost")]
     open_bets = [b for b in bets if b["status"] == "pending"]
 
     pnl = sum(
@@ -137,18 +131,17 @@ async def get_portfolio():
         for b in settled
     )
     open_stake_total = sum(b["actual_stake"] for b in open_bets)
-    bankroll = starting + pnl - open_stake_total
-    roi = (pnl / starting * 100) if starting else 0
-    won = [b for b in settled if b["status"] == "won"]
-    win_rate = len(won) / len(settled) * 100 if settled else None
+    bankroll  = starting + pnl - open_stake_total
+    roi       = (pnl / starting * 100) if starting else 0
+    won       = [b for b in settled if b["status"] == "won"]
+    win_rate  = len(won) / len(settled) * 100 if settled else None
 
     clv_bets = [b for b in bets if b.get("closing_odds") and b.get("actual_odds")]
-    avg_clv = (
+    avg_clv  = (
         sum((b["actual_odds"] / b["closing_odds"] - 1) * 100 for b in clv_bets) / len(clv_bets)
         if clv_bets else None
     )
 
-    # Streak
     streak = 0
     for b in reversed(settled):
         if b["status"] == "won":
@@ -157,18 +150,18 @@ async def get_portfolio():
             break
 
     return {
-        "bankroll": round(bankroll, 2),
+        "bankroll":         round(bankroll, 2),
         "starting_bankroll": starting,
-        "pnl": round(pnl, 2),
-        "roi": round(roi, 2),
-        "win_rate": round(win_rate, 1) if win_rate is not None else None,
-        "open_count": len(open_bets),
-        "open_stake": sum(b["actual_stake"] for b in open_bets),
-        "settled_count": len(settled),
-        "won_count": len(won),
-        "avg_clv": round(avg_clv, 2) if avg_clv is not None else None,
-        "streak": streak,
-        "total_bets": len(bets),
+        "pnl":              round(pnl, 2),
+        "roi":              round(roi, 2),
+        "win_rate":         round(win_rate, 1) if win_rate is not None else None,
+        "open_count":       len(open_bets),
+        "open_stake":       sum(b["actual_stake"] for b in open_bets),
+        "settled_count":    len(settled),
+        "won_count":        len(won),
+        "avg_clv":          round(avg_clv, 2) if avg_clv is not None else None,
+        "streak":           streak,
+        "total_bets":       len(bets),
     }
 
 @app.put("/api/portfolio/bankroll")
@@ -209,8 +202,6 @@ async def settle_bet(bet_id: str, data: BetSettle):
     row = await db.update_bet(bet_id, updates)
     if not row:
         raise HTTPException(404, "Bet not found")
-
-    # Auto-generate learning log entry
     asyncio.create_task(generate_learning_entry(row))
     await broadcast({"type": "bet_settled", "bet": row})
     return row
@@ -222,14 +213,10 @@ async def delete_bet(bet_id: str):
 
 @app.post("/api/reset")
 async def reset_dashboard(starting_bankroll: float = 500.0):
-    """
-    RESET — wipes all bets + learning log, resets bankroll to starting amount.
-    Matches, odds, news, recommendations and config are preserved.
-    """
     await db.reset_bets(starting_bankroll)
     await broadcast({"type": "reset", "bankroll": starting_bankroll})
-    print(f"🔄 Dashboard reset. Bankroll: €{starting_bankroll}")
-    return {"ok": True, "message": f"Reset complete. Bankroll set to €{starting_bankroll:.2f}"}
+    print(f"Dashboard reset. Bankroll: {starting_bankroll}")
+    return {"ok": True, "message": f"Reset complete. Bankroll set to EUR{starting_bankroll:.2f}"}
 
 # ──────────────────────────────────────────────────────────────
 # RECOMMENDATIONS
@@ -244,7 +231,6 @@ async def get_recommendations(status: Optional[str] = None):
 
 @app.post("/api/run-agent")
 async def run_agent_manually(background_tasks: BackgroundTasks):
-    """Manually trigger the full analysis cycle."""
     background_tasks.add_task(run_analysis_cycle)
     return {"message": "Agent analysis cycle started. Check /api/recommendations in ~30s."}
 
@@ -274,32 +260,29 @@ async def get_alerts():
 
 @app.get("/api/whatsapp-brief")
 async def get_whatsapp_brief():
-    """Generate today's WhatsApp message."""
     port = await get_portfolio()
     recs = await get_recommendations()
     name = (await db.get_config()).get("agent_name", "Atlas")
     approved = [r for r in recs if r.get("audit_status") == "Approved"]
-
     today = datetime.now().strftime("%d %b %Y")
     sgn = "+" if port["pnl"] >= 0 else ""
     lines = [
-        f"*WC2026 Intel — {today}*",
+        f"*WC2026 Intel -- {today}*",
         "",
-        f"Bankroll: €{port['bankroll']:.2f} | ROI: {sgn}{port['roi']:.1f}%",
-        f"P&L: {sgn}€{abs(port['pnl']):.2f} | Win Rate: {port['win_rate'] or '—'}%",
+        f"Bankroll: EUR{port['bankroll']:.2f} | ROI: {sgn}{port['roi']:.1f}%",
+        f"P&L: {sgn}EUR{abs(port['pnl']):.2f} | Win Rate: {port['win_rate'] or '--'}%",
         "",
         "*TODAY'S APPROVED BETS*",
     ]
     for i, r in enumerate(approved[:4], 1):
-        lines.append(f"{['1️⃣','2️⃣','3️⃣','4️⃣'][i-1]} {r['match']} — {r['selection']}")
-        lines.append(f"   Odds: {r['odds']} | Stake: €{r['recommended_stake']} | EV: +{r['ev']:.1f}%")
+        lines.append(f"{i}. {r['match']} -- {r['selection']}")
+        lines.append(f"   Odds: {r.get('odds','?')} | Stake: EUR{r.get('recommended_stake','?')} | EV: +{r.get('ev',0):.1f}%")
         lines.append("")
-    lines += [f"— {name}"]
-
+    lines += [f"-- {name}"]
     return {"text": "\n".join(lines), "agent": name, "date": today}
 
 # ──────────────────────────────────────────────────────────────
-# WEBSOCKET — LIVE PUSH
+# WEBSOCKET
 # ──────────────────────────────────────────────────────────────
 
 @app.websocket("/ws")
@@ -307,23 +290,98 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     active_connections.append(websocket)
     try:
-        # Send initial state on connect
         port = await get_portfolio()
         await websocket.send_text(json.dumps({"type": "init", "portfolio": port}))
-        # Keep alive
         while True:
             await asyncio.sleep(30)
             await websocket.send_text(json.dumps({"type": "ping"}))
     except WebSocketDisconnect:
-        active_connections.remove(websocket)
+        if websocket in active_connections:
+            active_connections.remove(websocket)
 
 # ──────────────────────────────────────────────────────────────
-# AUTO-SETTLEMENT ENGINE
+# INTERNAL ENDPOINTS
 # ──────────────────────────────────────────────────────────────
+
+@app.get("/api/internal/refresh-live")
+async def internal_refresh_live():
+    await refresh_live()
+    return {"ok": True}
+
+@app.get("/api/internal/refresh-odds")
+async def internal_refresh_odds():
+    await refresh_odds()
+    return {"ok": True}
+
+@app.get("/api/internal/refresh-news")
+async def internal_refresh_news():
+    await refresh_news()
+    return {"ok": True}
+
+@app.post("/api/internal/auto-settle")
+async def internal_auto_settle():
+    await auto_settle_bets()
+    return {"ok": True}
+
+# ──────────────────────────────────────────────────────────────
+# BACKGROUND FUNCTIONS (used by scheduler + endpoints)
+# ──────────────────────────────────────────────────────────────
+
+async def refresh_live():
+    try:
+        matches = await fetcher.get_wc_matches()
+        if matches:
+            await db.set_cache("matches", matches)
+            await broadcast({"type": "matches_updated", "matches": matches})
+    except Exception as e:
+        print(f"refresh_live error: {e}")
+
+
+async def refresh_odds():
+    try:
+        odds = await fetcher.get_live_odds()
+        if odds:
+            await db.set_cache("odds", odds)
+            await broadcast({"type": "odds_updated", "odds": odds})
+    except Exception as e:
+        print(f"refresh_odds error: {e}")
+
+
+async def refresh_news():
+    try:
+        news = await fetcher.get_news()
+        if news:
+            await db.set_cache("news", news)
+            await broadcast({"type": "news_updated", "news": news})
+    except Exception as e:
+        print(f"refresh_news error: {e}")
+
+
+async def run_analysis_cycle():
+    print("Starting analysis cycle...")
+    try:
+        matches    = await db.get_cached("matches") or []
+        odds       = await db.get_cached("odds") or []
+        news       = await db.get_cached("news") or []
+        candidates = await betting_agent.analyze(matches, odds, news)
+        approved   = []
+        for c in candidates:
+            result = await audit_agent.review(c, matches, odds)
+            if result.get("decision") in ("Approved", "Approved with Warnings"):
+                c["audit_score"]  = result.get("score")
+                c["audit_status"] = result.get("decision")
+                c["audit_notes"]  = result.get("notes")
+                approved.append(c)
+                await db.upsert_recommendation(c)
+        await broadcast({"type": "recommendations_updated", "count": len(approved)})
+        print(f"Analysis cycle complete: {len(approved)} approved.")
+    except Exception as e:
+        print(f"run_analysis_cycle error: {e}")
+
 
 def determine_bet_result(bet: dict, match: dict):
-    score_home = match.get("score_home")
-    score_away = match.get("score_away")
+    score_home  = match.get("score_home")
+    score_away  = match.get("score_away")
     if score_home is None or score_away is None:
         return None
     home_name   = match.get("home", "").lower()
@@ -355,9 +413,9 @@ def determine_bet_result(bet: dict, match: dict):
 
     if "double chance" in market or ("/" in selection and len(selection) <= 5):
         sel = selection.replace(" ", "")
-        if sel in ("1/x","home/draw"):  return "won" if score_home >= score_away else "lost"
-        if sel in ("x/2","draw/away"):  return "won" if score_home <= score_away else "lost"
-        if sel in ("1/2","home/away"):  return "won" if score_home != score_away else "lost"
+        if sel in ("1/x", "home/draw"):  return "won" if score_home >= score_away else "lost"
+        if sel in ("x/2", "draw/away"):  return "won" if score_home <= score_away else "lost"
+        if sel in ("1/2", "home/away"):  return "won" if score_home != score_away else "lost"
 
     if "-0.5" in selection or "ah" in market or "handicap" in market:
         if home_name in selection or "home" in selection: return "won" if score_home > score_away else "lost"
@@ -366,3 +424,45 @@ def determine_bet_result(bet: dict, match: dict):
     if home_name in selection: return "won" if score_home > score_away else "lost"
     if away_name in selection: return "won" if score_away > score_home else "lost"
     return None
+
+
+async def auto_settle_bets():
+    try:
+        all_bets = await db.get_bets()
+        pending  = [b for b in all_bets if b["status"] == "pending"]
+        if not pending:
+            return
+        matches  = await fetcher.get_wc_matches()
+        finished = [m for m in matches if m.get("status") == "FINISHED"]
+        if not finished:
+            return
+        settled_count = 0
+        for bet in pending:
+            bet_match = bet.get("match", "").lower()
+            for match in finished:
+                home = match.get("home", "").lower()
+                away = match.get("away", "").lower()
+                if home in bet_match or away in bet_match:
+                    result = determine_bet_result(bet, match)
+                    if result:
+                        updates = {"status": result}
+                        await db.update_bet(bet["id"], updates)
+                        asyncio.create_task(generate_learning_entry({**bet, **updates}))
+                        await broadcast({"type": "bet_settled", "bet": {**bet, **updates}})
+                        settled_count += 1
+                        break
+        if settled_count:
+            port = await get_portfolio()
+            await broadcast({"type": "portfolio_updated", "portfolio": port})
+            print(f"Auto-settled {settled_count} bet(s).")
+    except Exception as e:
+        print(f"auto_settle_bets error: {e}")
+
+
+async def generate_learning_entry(bet: dict):
+    try:
+        entry = await betting_agent.generate_learning_log(bet)
+        if entry:
+            await db.save_learning_log(entry)
+    except Exception as e:
+        print(f"generate_learning_entry error: {e}")
