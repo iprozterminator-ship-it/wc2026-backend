@@ -1002,16 +1002,17 @@ async function fetchPortfolio(){
   try{
     const p=await apiFetch('/api/portfolio');
     STATE.bankroll.starting=p.starting_bankroll;
-    // Update header directly from API values
+    // Bankroll = API bankroll minus open stakes (deduct committed money)
+    const trueBankroll = p.bankroll - (p.open_stake||0);
     const sgn=p.pnl>=0?'+':'';
-    document.getElementById('h-bk').textContent='€'+p.bankroll.toFixed(2);
+    document.getElementById('h-bk').textContent='€'+trueBankroll.toFixed(2);
     const dp=document.getElementById('h-dp');dp.textContent=sgn+'€'+Math.abs(p.pnl).toFixed(2);dp.style.color=p.pnl>=0?'var(--g)':'var(--r)';
     const ri=document.getElementById('h-roi');ri.textContent=sgn+p.roi.toFixed(2)+'%';ri.style.color=p.roi>=0?'var(--g)':'var(--r)';
     document.getElementById('h-exp').textContent='€'+p.open_stake.toFixed(0)+' / €'+(p.starting_bankroll*.2).toFixed(0);
     document.getElementById('h-open').textContent=p.open_count;
     document.getElementById('h-wr').textContent=p.win_rate!==null?p.win_rate.toFixed(0)+'%':'—';
-    const ms=getCurrentMilestone(p.bankroll);if(ms)document.getElementById('h-goal').textContent=ms.desc;
-    ['d-bk','p-bk'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='€'+p.bankroll.toFixed(2);});
+    const ms=getCurrentMilestone(trueBankroll);if(ms)document.getElementById('h-goal').textContent=ms.desc;
+    ['d-bk','p-bk'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='€'+trueBankroll.toFixed(2);});
     ['d-pnl','p-pnl'].forEach(id=>{const e=document.getElementById(id);if(e){e.textContent=sgn+'€'+Math.abs(p.pnl).toFixed(2);e.className='sv '+(p.pnl>=0?'pos':'neg');}});
     ['d-roi','p-roi'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='ROI '+sgn+p.roi.toFixed(2)+'%';});
     ['d-wr','p-wr'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=p.win_rate!==null?p.win_rate.toFixed(0)+'%':'—';});
@@ -1025,7 +1026,7 @@ async function fetchPortfolio(){
     const trp=document.getElementById('tr-rpnl');if(trp)trp.textContent=(p.pnl>=0?'+€':'−€')+Math.abs(p.pnl).toFixed(2);
     const rclv=document.getElementById('r-clv');if(rclv)rclv.textContent=p.avg_clv!==null?(p.avg_clv>=0?'+':'')+p.avg_clv.toFixed(1)+'%':'—';
     const rcn=document.getElementById('r-clv-n');if(rcn)rcn.textContent=p.total_bets-p.settled_count;
-    const em=document.getElementById('eq-meta');if(em)em.textContent='€'+p.bankroll.toFixed(2)+' ('+sgn+p.roi.toFixed(1)+'%)';
+    const em=document.getElementById('eq-meta');if(em)em.textContent='€'+trueBankroll.toFixed(2)+' ('+sgn+p.roi.toFixed(1)+'%)';
     document.getElementById('tr-n').textContent=p.total_bets;
   }catch(e){console.warn('Portfolio API unavailable, using local state');}
 }
@@ -1679,29 +1680,45 @@ async function confirmExec(){
   const ao=parseFloat(document.getElementById('bs-actual-odds').value);
   if(isNaN(as)||as<=0||isNaN(ao)||ao<=1){return;}
   const prevBal=calcStats().bankroll;
+  const rec=execRec;
   closeExec();
+
+  // ── OPTIMISTIC: update local state immediately ──
+  const tempBet={
+    id:'b'+Date.now(),match:rec.match,date:rec.date||new Date().toISOString().split('T')[0],
+    market:rec.market,selection:rec.sel,recOdds:rec.odds,odds:ao,
+    recStake:rec.stake,stake:as,confidence:rec.confidence||rec.conf||7,
+    risk:rec.risk||'Moderate',
+    reason:'Placed via AI recommendation. '+(rec.rationale||rec.audit?.notes||''),
+    status:'pending',closingOdds:null,isAccumulator:rec.isAccumulator||false,
+    recId:rec.id,createdAt:new Date().toISOString()
+  };
+  STATE.bets.push(tempBet);
+  saveState();
+  renderAll();
+  animateBalance(prevBal,prevBal-as,'down');
+  showToast(`✓ Bet placed — €${as} on ${rec.sel}`);
+  switchTab('trades');
+
+  // ── BACKGROUND SYNC to API ──
   if(API_BASE){
     try{
-      await apiFetch('/api/bets',{method:'POST',body:JSON.stringify({
-        match:execRec.match,date:execRec.date||new Date().toISOString().split('T')[0],
-        market:execRec.market,selection:execRec.sel,
-        rec_odds:execRec.odds,actual_odds:ao,rec_stake:execRec.stake,actual_stake:as,
-        confidence:execRec.confidence||execRec.conf||7,risk:execRec.risk||'Moderate',
-        reasoning:'Placed via AI recommendation. '+(execRec.rationale||execRec.audit?.notes||''),
-        is_accumulator:execRec.isAccumulator||false,rec_id:execRec.id||null
+      const created=await apiFetch('/api/bets',{method:'POST',body:JSON.stringify({
+        match:rec.match,date:rec.date||new Date().toISOString().split('T')[0],
+        market:rec.market,selection:rec.sel,
+        rec_odds:rec.odds,actual_odds:ao,rec_stake:rec.stake,actual_stake:as,
+        confidence:rec.confidence||rec.conf||7,risk:rec.risk||'Moderate',
+        reasoning:'Placed via AI recommendation. '+(rec.rationale||rec.audit?.notes||''),
+        is_accumulator:rec.isAccumulator||false,rec_id:rec.id||null
       })});
+      // Replace temp bet with server bet
+      if(created?.id){
+        const idx=STATE.bets.findIndex(b=>b.id===tempBet.id);
+        if(idx>=0)STATE.bets[idx]={...tempBet,...normalizeBet(created)};
+      }
       await fetchBets();await fetchPortfolio();
-      animateBalance(prevBal,prevBal-as,'down');return;
-    }catch(e){console.warn('API bet save failed, using local state',e);}
+    }catch(e){console.warn('API bet save failed, kept in local state',e);}
   }
-  const b={id:'b'+Date.now(),match:execRec.match,date:execRec.date||new Date().toISOString().split('T')[0],
-    market:execRec.market,selection:execRec.sel,recOdds:execRec.odds,odds:ao,
-    recStake:execRec.stake,stake:as,confidence:execRec.confidence||execRec.conf,
-    risk:execRec.risk,reason:'Placed via AI recommendation. '+(execRec.rationale||execRec.audit?.notes||''),
-    status:'pending',closingOdds:null,isAccumulator:execRec.isAccumulator||false,
-    recId:execRec.id,createdAt:new Date().toISOString()};
-  STATE.bets.push(b);saveState();renderAll();
-  animateBalance(prevBal,prevBal-as,'down');
 }
 
 function closeExec(){document.getElementById('exec-ov').classList.remove('open');execRec=null;}
@@ -2587,7 +2604,7 @@ async function placeBasket(){
   betObjects.forEach(b=>STATE.bets.push(b));
   updatePeakBankroll();
   saveState();
-  render(); // balance deducts right now via calcStats()
+  renderAll(); // balance deducts right now via calcStats()
   animateBalance(prevBal, prevBal-totalNewStake, 'down');
   showToast(`✓ ${betObjects.length} bet${betObjects.length>1?'s':''} logged — balance updated`);
   BASKET=[];
@@ -2613,47 +2630,7 @@ async function placeBasket(){
         }
       }catch(e){console.warn('API sync failed for bet, kept in local state',betObj.id);}
     }
-    // Quiet re-sync (don't re-render — local state already correct)
-    try{const bets=await apiFetch('/api/bets');STATE.bets=bets.map(normalizeBet);saveState();renderPositions();renderLedger();}catch(e){}
-  }
-}
-
-// Track peak bankroll for drawdown multiplier
-function updatePeakBankroll(){
-  const s=calcStats();
-  if(!STATE.bankroll.peak||s.bankroll>STATE.bankroll.peak){
-    STATE.bankroll.peak=s.bankroll;
-  }
-}
-
-function showToast(msg){
-  const t=document.getElementById('toast');if(!t)return;
-  t.textContent=msg;t.style.opacity='1';
-  clearTimeout(t._to);t._to=setTimeout(()=>t.style.opacity='0',2400);
-}
-
-// ═══════════════════════════ LEARNING LOG ═══════════════════════════
-function updateLearningLog(){
-  const el=document.getElementById('wa-learning-log');if(!el)return;
-  const s=calcStats();
-  if(!s.settled.length){el.innerHTML='<div style="color:var(--t3);font-size:11px">No settled bets yet. Learning log activates after first match result.</div>';return;}
-  const logs=STATE.learningLog||[];
-  if(!logs.length)el.innerHTML='<div style="color:var(--t3);font-size:11px">Settle positions to trigger model self-reflection.</div>';
-  else el.innerHTML=logs.map(l=>`<div style="padding:6px 0;border-bottom:1px solid rgba(26,37,64,.3);font-size:11px"><div style="color:var(--gold);font-family:var(--mono);margin-bottom:2px">${l.date||''}</div><div style="color:var(--t2)">${l.reflection||''}</div></div>`).join('');
-}
-
-// INIT
-function render(){updateHeader();renderPositions();renderLedger();renderMilestones();updateLearningLog();}
-
-window.onload=function(){
-  loadState();
-  updatePeakBankroll();
-  startClock();
-  renderAll();
-  initAgentIdentity();
-  initAPI();
-  updateBasketBadge();
-};
-</script>
-</body>
-</html>
+    // Quiet re-sync — update local state from API truth
+    try{
+      const bets=await apiFetch('/api/bets');
+  

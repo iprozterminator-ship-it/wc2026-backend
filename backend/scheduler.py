@@ -97,15 +97,4 @@ def start_scheduler():
     scheduler.start()
     print("✅ Scheduler started. Jobs:")
     for job in scheduler.get_jobs():
-        print(f"   [{job.id}] {job.name} — next: {job.next_run_time}")
-
-
-def _run_async(coro_fn):
-    """Wrap an async function for APScheduler (which expects sync callables)."""
-    def wrapper():
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            asyncio.create_task(coro_fn())
-        else:
-            loop.run_until_complete(coro_fn())
-    return wrapper
+        print(f"   [{job.id}] {job.name} — n

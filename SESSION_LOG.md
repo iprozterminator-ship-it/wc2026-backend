@@ -145,4 +145,4 @@ Cowork is desktop-only. From phone, use Claude.ai (normal chat) for:
 - Generating WhatsApp daily briefs manually
 - Tournament research
 
-Use the **📲 Daily Brief** button in the dashboard to generate a copy-paste WhatsApp summary.
+Use the **📲 Daily Brief** button in the das

@@ -28,10 +28,25 @@ async def lifespan(app: FastAPI):
     """Start background scheduler on boot, stop on shutdown."""
     print("🚀 WC2026 Agent starting...")
     await db.init()
+    # Pre-populate cache on startup so dashboard has data immediately
+    asyncio.create_task(_startup_cache())
     start_scheduler()
     yield
     scheduler.shutdown()
     print("🛑 WC2026 Agent stopped.")
+
+async def _startup_cache():
+    """Populate matches/odds/news cache on startup using fallbacks if needed."""
+    try:
+        matches = await fetcher.get_wc_matches()
+        odds    = await fetcher.get_live_odds()
+        news    = await fetcher.get_news()
+        if matches: await db.set_cache("matches", matches)
+        if odds:    await db.set_cache("odds", odds)
+        if news:    await db.set_cache("news", news)
+        print(f"✅ Startup cache: {len(matches)} matches, {len(odds)} odds, {len(news)} news")
+    except Exception as e:
+        print(f"⚠️ Startup cache failed: {e}")
 
 app = FastAPI(title="WC2026 Trading Terminal API", version="1.0.0", lifespan=lifespan)
 
@@ -121,7 +136,8 @@ async def get_portfolio():
         else -b["actual_stake"]
         for b in settled
     )
-    bankroll = starting + pnl
+    open_stake_total = sum(b["actual_stake"] for b in open_bets)
+    bankroll = starting + pnl - open_stake_total
     roi = (pnl / starting * 100) if starting else 0
     won = [b for b in settled if b["status"] == "won"]
     win_rate = len(won) / len(settled) * 100 if settled else None
@@ -291,92 +307,63 @@ async def websocket_endpoint(websocket: WebSocket):
         active_connections.remove(websocket)
 
 # ──────────────────────────────────────────────────────────────
-# AGENT ANALYSIS CYCLE (called by scheduler)
+# AUTO-SETTLEMENT ENGINE
 # ──────────────────────────────────────────────────────────────
 
-async def run_analysis_cycle():
-    """
-    Morning intelligence cycle:
-    1. Fetch latest match + odds + news data
-    2. Run Betting Agent (Claude) → generates recommendations
-    3. Run Audit Agent (Claude) → approves / rejects each
-    4. Store approved recs in DB
-    5. Push to connected clients
-    """
-    print(f"🤖 Running analysis cycle at {datetime.now().isoformat()}")
+def determine_bet_result(bet: dict, match: dict):
+    score_home = match.get("score_home")
+    score_away = match.get("score_away")
+    if score_home is None or score_away is None:
+        return None
+    home_name   = match.get("home", "").lower()
+    away_name   = match.get("away", "").lower()
+    selection   = bet.get("selection", "").lower().strip()
+    market      = bet.get("market", "").lower().strip()
+    total_goals = score_home + score_away
+
+    if any(k in market for k in ("h2h", "1x2", "match result", "match winner", "win")):
+        if score_home > score_away:
+            won = selection in (home_name, "home", "1", "home win") or home_name in selection
+        elif score_home == score_away:
+            won = selection in ("draw", "x", "tie", "match draw")
+        else:
+            won = selection in (away_name, "away", "2", "away win") or away_name in selection
+        return "won" if won else "lost"
+
+    if "over" in selection or "under" in selection:
+        try:
+            line = float(selection.split()[-1])
+            return "won" if ("over" in selection and total_goals > line) or ("under" in selection and total_goals < line) else "lost"
+        except (ValueError, IndexError):
+            pass
+
+    if "btts" in market or "both teams" in selection:
+        btts = score_home > 0 and score_away > 0
+        if "yes" in selection: return "won" if btts else "lost"
+        if "no" in selection:  return "won" if not btts else "lost"
+
+    if "double chance" in market or ("/" in selection and len(selection) <= 5):
+        sel = selection.replace(" ", "")
+        if sel in ("1/x","home/draw"):  return "won" if score_home >= score_away else "lost"
+        if sel in ("x/2","draw/away"):  return "won" if score_home <= score_away else "lost"
+        if sel in ("1/2","home/away"):  return "won" if score_home != score_away else "lost"
+
+    if "-0.5" in selection or "ah" in market or "handicap" in market:
+        if home_name in selection or "home" in selection: return "won" if score_home > score_away else "lost"
+        if away_name in selection or "away" in selection: return "won" if score_away > score_home else "lost"
+
+    if home_name in selection: return "won" if score_home > score_away else "lost"
+    if away_name in selection: return "won" if score_away > score_home else "lost"
+    return None
+
+
+async def auto_settle_bets():
+    """Runs every 5 min — checks finished matches and auto-settles pending bets."""
     try:
-        # 1. Fetch data
-        matches = await fetcher.get_wc_matches()
-        odds    = await fetcher.get_live_odds()
-        news    = await fetcher.get_news()
-
-        await db.set_cache("matches", matches)
-        await db.set_cache("odds", odds)
-        await db.set_cache("news", news)
-
-        # 2. Betting Agent generates candidates
-        candidates = await betting_agent.analyze(matches, odds, news)
-        print(f"  Betting Agent: {len(candidates)} candidates generated")
-
-        # 3. Audit Agent reviews each
-        approved = []
-        for rec in candidates:
-            audit = await audit_agent.review(rec)
-            rec["audit_score"]  = audit["score"]
-            rec["audit_status"] = audit["status"]
-            rec["audit_notes"]  = audit["notes"]
-            rec["audit_warnings"] = audit.get("warnings", [])
-            if audit["status"] != "Rejected":
-                approved.append(rec)
-
-        print(f"  Audit Agent: {len(approved)}/{len(candidates)} approved")
-
-        # 4. Save to DB
-        for rec in approved:
-            await db.upsert_recommendation(rec)
-
-        # 5. Push to clients
-        await broadcast({"type": "recommendations_updated", "count": len(approved)})
-        print(f"✅ Analysis cycle complete. {len(approved)} recommendations live.")
-
-    except Exception as e:
-        print(f"❌ Analysis cycle failed: {e}")
-        await broadcast({"type": "error", "message": str(e)})
-
-async def generate_learning_entry(settled_bet: dict):
-    """After a bet settles, ask Claude to reflect on the prediction."""
-    try:
-        won = settled_bet["status"] == "won"
-        entry = await betting_agent.reflect(settled_bet, won)
-        await db.save_learning_log(entry)
-        await broadcast({"type": "learning_log", "entry": entry})
-    except Exception as e:
-        print(f"Learning log error: {e}")
-
-# ──────────────────────────────────────────────────────────────
-# REFRESH ENDPOINTS (called by scheduler)
-# ──────────────────────────────────────────────────────────────
-
-@app.post("/api/internal/refresh-live")
-async def refresh_live():
-    """Called every 15s to refresh live match data."""
-    matches = await fetcher.get_live_matches()
-    await db.set_cache("matches", matches)
-    await broadcast({"type": "matches_updated", "matches": matches})
-    return {"ok": True}
-
-@app.post("/api/internal/refresh-odds")
-async def refresh_odds():
-    """Called every 60s to refresh odds."""
-    odds = await fetcher.get_live_odds()
-    await db.set_cache("odds", odds)
-    await broadcast({"type": "odds_updated", "odds": odds})
-    return {"ok": True}
-
-@app.post("/api/internal/refresh-news")
-async def refresh_news():
-    """Called every 5min to refresh news."""
-    news = await fetcher.get_news()
-    await db.set_cache("news", news)
-    await broadcast({"type": "news_updated", "news": news})
-    return {"ok": True}
+        all_bets = await db.get_bets()
+        pending  = [b for b in all_bets if b["status"] == "pending"]
+        if not pending:
+            return
+        matches  = await fetcher.get_wc_matches()
+        finished = [m for m in matches if m.get("status") == "FINISHED"]
+        if not finishe
