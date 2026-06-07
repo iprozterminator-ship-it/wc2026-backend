@@ -220,6 +220,17 @@ async def delete_bet(bet_id: str):
     await db.delete_bet(bet_id)
     return {"ok": True}
 
+@app.post("/api/reset")
+async def reset_dashboard(starting_bankroll: float = 500.0):
+    """
+    RESET — wipes all bets + learning log, resets bankroll to starting amount.
+    Matches, odds, news, recommendations and config are preserved.
+    """
+    await db.reset_bets(starting_bankroll)
+    await broadcast({"type": "reset", "bankroll": starting_bankroll})
+    print(f"🔄 Dashboard reset. Bankroll: €{starting_bankroll}")
+    return {"ok": True, "message": f"Reset complete. Bankroll set to €{starting_bankroll:.2f}"}
+
 # ──────────────────────────────────────────────────────────────
 # RECOMMENDATIONS
 # ──────────────────────────────────────────────────────────────
@@ -355,15 +366,3 @@ def determine_bet_result(bet: dict, match: dict):
     if home_name in selection: return "won" if score_home > score_away else "lost"
     if away_name in selection: return "won" if score_away > score_home else "lost"
     return None
-
-
-async def auto_settle_bets():
-    """Runs every 5 min — checks finished matches and auto-settles pending bets."""
-    try:
-        all_bets = await db.get_bets()
-        pending  = [b for b in all_bets if b["status"] == "pending"]
-        if not pending:
-            return
-        matches  = await fetcher.get_wc_matches()
-        finished = [m for m in matches if m.get("status") == "FINISHED"]
-        if not finishe
